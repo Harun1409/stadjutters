@@ -1,15 +1,18 @@
+// /apps/(tabs)/chats.tsx
 import { Image, StyleSheet, Platform, View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import 'react-native-gesture-handler';
+import { useSession } from '../SessionContext'; // Needed to get session information (id,email etc)
 
+export default function ChatsScreen() {
+  const { session } = useSession();
 
-export default function HomeScreen() {
   return (
     <View style={styles.kikker}>
-      <ThemedText>Home</ThemedText>
-      {/*<Link href="/explore" style={{ color: 'blue'}}>explore</Link>*/}
-      {/*<Link href="/login" style={{ color: 'blue'}}>login</Link>*/}
+      <ThemedText>Chats</ThemedText>
+      {session && session.user && (
+        <ThemedText>Welcome, {session.user.email}!</ThemedText> // Adjust to session.user.username if available
+      )}
     </View>
   );
 }
