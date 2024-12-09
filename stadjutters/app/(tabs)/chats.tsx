@@ -2,17 +2,19 @@
 import { Image, StyleSheet, Platform, View } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
-import { useSession } from '../SessionContext'; // Needed to get session information (id,email etc)
+import { useSession } from '@/app/SessionContext'; // Needed to get session information (id,email etc)
 
 export default function ChatsScreen() {
   const { session } = useSession();
 
   return (
     <View style={styles.kikker}>
-      <ThemedText>Chats</ThemedText>
-      {session && session.user && (
+      {/*<ThemedText>Chats</ThemedText>*/}
+      {session && session.user ? (
         <ThemedText>Welcome, {session.user.email}!</ThemedText> // Adjust to session.user.username if available
-      )}
+      ) : (
+          <ThemedText>Log in om je chats te bekijken!</ThemedText>
+        )}
     </View>
   );
 }
