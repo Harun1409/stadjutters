@@ -75,7 +75,7 @@ export default function TabLayout() {
               borderBottomWidth: 1, // Add top border width 
               borderBottomColor: 'lightgray', // Specify the border color
             },
-            tabBarIcon: ({ color }) => <Icon size={28} name="map" color={color} />,
+            tabBarIcon: ({ color }) => <Icon size={28} name="map-marker" color={color} />,
           }}
         />
         <Tabs.Screen

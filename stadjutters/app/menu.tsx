@@ -85,41 +85,48 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
                         )}
                     </View>
                     <View style={styles.menuItems}>
-                        <View style={styles.menuItemDivider}/>
-                        <View style={styles.menuItemRow}>
-                            <Icon size={25} name="package" color={'#7A3038'} style={styles.menuIcon}/>
-                            <Link href="./menuItems/mijnVondsten" onPress={closeMenu} style={styles.menuItem}>Mijn
-                                straat-/huisvondsten</Link>
-                        </View>
-                        <View style={styles.menuItemDivider}/>
-                        <View style={styles.menuItemRow}>
-                            <Icon size={25} name="star" color={'#7A3038'} style={styles.menuIcon}/>
-                            <Link href="./menuItems/mijnBeoordelingen" onPress={closeMenu} style={styles.menuItem}>Mijn
-                                beoordelingen</Link>
-                        </View>
-                        <View style={styles.menuItemDivider}/>
-                        <View style={styles.menuItemRow}>
-                            <Icon size={25} name="bookmark" color={'#7A3038'} style={styles.menuIcon}/>
-                            <Link href="./menuItems/opgeslagenVondsten" onPress={closeMenu} style={styles.menuItem}>Opgeslagen
-                                vondsten</Link>
-                        </View>
-                        <View style={styles.menuItemDivider}/>
-                        <View style={styles.menuItemRow}>
-                            <Icon size={25} name="cog" color={'#7A3038'} style={styles.menuIcon}/>
-                            <Link href="./menuItems/instellingen" onPress={closeMenu}
-                                  style={styles.menuItem}>Instellingen</Link>
-                        </View>
-                        <View style={styles.menuItemDivider}/>
-                        <View style={styles.menuItemRow}>
-                            <Icon size={25} name="account" color={'#7A3038'} style={styles.menuIcon}/>
-                            {session ? (
+                        {session ? (
+                            <>
+                            <View style={styles.menuItemDivider}/>
+                            <View style={styles.menuItemRow}>
+                                <Icon size={25} name="package" color={'#7A3038'} style={styles.menuIcon}/>
+                                <Link href="./menuItems/mijnVondsten" onPress={closeMenu} style={styles.menuItem}>Mijn
+                                    straat-/huisvondsten</Link>
+                            </View>
+                            <View style={styles.menuItemDivider}/>
+                            <View style={styles.menuItemRow}>
+                                <Icon size={25} name="star" color={'#7A3038'} style={styles.menuIcon}/>
+                                <Link href="./menuItems/mijnBeoordelingen" onPress={closeMenu} style={styles.menuItem}>Mijn
+                                    beoordelingen</Link>
+                            </View>
+                            <View style={styles.menuItemDivider}/>
+                            <View style={styles.menuItemRow}>
+                                <Icon size={25} name="bookmark" color={'#7A3038'} style={styles.menuIcon}/>
+                                <Link href="./menuItems/opgeslagenVondsten" onPress={closeMenu} style={styles.menuItem}>Opgeslagen
+                                    vondsten</Link>
+                            </View>
+                            <View style={styles.menuItemDivider}/>
+                            <View style={styles.menuItemRow}>
+                                <Icon size={25} name="cog" color={'#7A3038'} style={styles.menuIcon}/>
+                                <Link href="./menuItems/instellingen" onPress={closeMenu}
+                                      style={styles.menuItem}>Instellingen</Link>
+                            </View>
+                            <View style={styles.menuItemDivider}/>
+                            <View style={styles.menuItemRow}>
+                                <Icon size={25} name="account" color={'#7A3038'} style={styles.menuIcon}/>
                                 <Link href="/login" onPress={closeMenu}
                                       style={[styles.menuItem, styles.ExtraSpacing]}>Account</Link>
-                            ) : (
+
+                            </View>
+                            </>
+                        ) :
+                            (<>
+                            <View style={styles.menuItemRow}>
+                                <Icon size={25} name="account" color={'#7A3038'} style={styles.menuIcon}/>
                                 <Link href="/login" onPress={closeMenu} style={[styles.menuItem, styles.ExtraSpacing]}>Login</Link>
-                            )}
-                        </View>
-                        {/*<View style={styles.menuItemDivider} />*/}
+                            </View>
+                            </>)
+                        }
                     </View>
                 </Animated.View>
             </PanGestureHandler>
