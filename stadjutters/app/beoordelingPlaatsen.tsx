@@ -9,7 +9,7 @@ export default function HomeScreen() {
       <Text style={styles.label}>Voer je naam in:</Text>
       <TextInput
         style={styles.input}
-        placeholder="Typ hier..."
+        placeholder="Type hier..."
         value={text}
         onChangeText={(value) => setText(value)} // Bijwerken van de state
       />
