@@ -90,25 +90,25 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
                             <View style={styles.menuItemDivider}/>
                             <View style={styles.menuItemRow}>
                                 <Icon size={25} name="package" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="./menuItems/mijnVondsten" onPress={closeMenu} style={styles.menuItem}>Mijn
+                                <Link href="./menuItems/mijnVondsten.tsx" onPress={closeMenu} style={styles.menuItem}>Mijn
                                     straat-/huisvondsten</Link>
                             </View>
                             <View style={styles.menuItemDivider}/>
                             <View style={styles.menuItemRow}>
                                 <Icon size={25} name="star" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="./menuItems/mijnBeoordelingen" onPress={closeMenu} style={styles.menuItem}>Mijn
+                                <Link href="./menuItems/mijnBeoordelingen.tsx" onPress={closeMenu} style={styles.menuItem}>Mijn
                                     beoordelingen</Link>
                             </View>
                             <View style={styles.menuItemDivider}/>
                             <View style={styles.menuItemRow}>
                                 <Icon size={25} name="bookmark" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="./menuItems/opgeslagenVondsten" onPress={closeMenu} style={styles.menuItem}>Opgeslagen
+                                <Link href="./menuItems/opgeslagenVondsten.tsx" onPress={closeMenu} style={styles.menuItem}>Opgeslagen
                                     vondsten</Link>
                             </View>
                             <View style={styles.menuItemDivider}/>
                             <View style={styles.menuItemRow}>
                                 <Icon size={25} name="cog" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="./menuItems/instellingen" onPress={closeMenu}
+                                <Link href="./menuItems/instellingen.tsx" onPress={closeMenu}
                                       style={styles.menuItem}>Instellingen</Link>
                             </View>
                             <View style={styles.menuItemDivider}/>
@@ -121,10 +121,12 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
                             </>
                         ) :
                             (<>
+                                <View style={styles.menuItemDivider}/>
                             <View style={styles.menuItemRow}>
                                 <Icon size={25} name="account" color={'#7A3038'} style={styles.menuIcon}/>
                                 <Link href="/login" onPress={closeMenu} style={[styles.menuItem, styles.ExtraSpacing]}>Login</Link>
                             </View>
+                                <View style={styles.menuItemDivider}/>
                             </>)
                         }
                     </View>

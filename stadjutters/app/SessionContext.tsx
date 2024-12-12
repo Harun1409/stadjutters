@@ -47,3 +47,7 @@ export const useSession = () => {
   }
   return context;
 };
+
+
+// Add a default export for SessionProvider
+export default SessionProvider;
