@@ -4,6 +4,8 @@ import React, { useState } from 'react';
 import { useSession } from '../SessionContext'; // Custom hook to get session
 import { supabase } from '../../lib/supabase'; // Correct import from your supabase.tsx file
 import * as FileSystem from 'expo-file-system'; // allows you to read files from the local file system and then create a blob-like object for upload.
+import { Buffer } from 'buffer';
+global.Buffer = Buffer;
 
 export default function HomeScreen() {
   const { session } = useSession(); // Assuming this provides session info (user ID)
@@ -58,53 +60,44 @@ export default function HomeScreen() {
     setUploading(true);
 
     const fileName = image.split('/').pop();
-    const fileExt = fileName?.split('.').pop() || 'jpeg'; // Default to 'jpeg'
+    const fileExt = fileName?.split('.').pop() || 'jpeg';
     const filePath = `public/${Date.now()}.${fileExt}`;
+    console.log("Uploading image:", { uri: image, fileName, filePath });
 
     try {
-        console.log('Reading file:', image);
+        // Read file directly as binary
         const fileContent = await FileSystem.readAsStringAsync(image, {
             encoding: FileSystem.EncodingType.Base64,
         });
 
-        if (!fileContent) {
-            console.error('Failed to read file content');
-            alert('Error reading the file');
-            setUploading(false);
-            return;
-        }
+        const buffer = Buffer.from(fileContent, 'base64');
 
-        // Convert base64 to Blob
-        const blob = new Blob([Uint8Array.from(atob(fileContent), c => c.charCodeAt(0))], {
-            type: `image/${fileExt}`,
-        });
+        console.log("Buffer created for upload:", buffer.byteLength);
 
-        console.log('Uploading image to:', filePath);
-
-        // Upload the blob to Supabase
+        // Upload file to Supabase
         const { data, error } = await supabase.storage
-            .from('UserUploadedImages') // Replace with your bucket name
-            .upload(filePath, blob);
+            .from('UserUploadedImages')
+            .upload(filePath, buffer, {
+                contentType: `image/${fileExt}`,
+                cacheControl: '3600',
+                upsert: false,
+            });
 
-        if (error) {
-            console.error('Error uploading image:', error);
-            alert('Error uploading image');
-            setUploading(false);
-            return;
-        }
+        if (error) throw error;
 
         console.log('Upload successful:', data);
 
-        // Get the public URL of the uploaded image
+        // Get public URL of the uploaded file
         const publicUrl = supabase.storage
             .from('UserUploadedImages')
             .getPublicUrl(filePath).data.publicUrl;
 
         console.log('Image public URL:', publicUrl);
 
-        // Insert the image URL into the database
+          // Insert image metadata into the database
+          console.log("User ID:", session?.user?.id);
         const { error: dbError } = await supabase
-            .from('Plaatsingen') // Replace with your table name
+            .from('findings')
             .insert([
                 {
                     image_url: publicUrl,
@@ -114,12 +107,10 @@ export default function HomeScreen() {
                 },
             ]);
 
-        if (dbError) {
-            console.error('Error storing image URL in database:', dbError);
-            alert('Error storing image URL');
-        } else {
-            alert('Image uploaded and stored successfully!');
-        }
+        if (dbError) throw dbError;
+//https://knjzfxzobmujjzmtdwnf.supabase.co/storage/v1/object/public/UserUploadedImages/public/1734130038616.jpg
+//
+        alert('Image uploaded and stored successfully!');
     } catch (error) {
         console.error('Error uploading image:', error);
         alert('Error uploading image');
@@ -127,7 +118,8 @@ export default function HomeScreen() {
         setUploading(false);
     }
 };
-  
+
+
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
