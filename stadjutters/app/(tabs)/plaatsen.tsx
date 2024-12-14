@@ -5,11 +5,14 @@ import { useSession } from '../SessionContext'; // Custom hook to get session
 import { supabase } from '../../lib/supabase'; // Correct import from your supabase.tsx file
 import * as FileSystem from 'expo-file-system'; // allows you to read files from the local file system and then create a blob-like object for upload.
 import { Buffer } from 'buffer';
+import { title } from 'process';
+import { text } from 'stream/consumers';
 global.Buffer = Buffer;
 
 export default function HomeScreen() {
   const { session } = useSession(); // Assuming this provides session info (user ID)
-  
+  const [titlePlaatsen, onChangeTitle] = React.useState('');
+  const [descriptionPlaatsen, onChangeDescription] = React.useState('');
   const [image, setImage] = useState<string | null>(null); // Holds the image URI
   const [uploading, setUploading] = useState(false); // Uploading state
   
@@ -102,14 +105,13 @@ export default function HomeScreen() {
                 {
                     image_url: publicUrl,
                     uid: session?.user.id,
-                    title: 'Image Title',
-                    description: 'Image Description',
+                    title: titlePlaatsen,
+                    description: descriptionPlaatsen,
                 },
             ]);
 
         if (dbError) throw dbError;
-//https://knjzfxzobmujjzmtdwnf.supabase.co/storage/v1/object/public/UserUploadedImages/public/1734130038616.jpg
-//
+
         alert('Image uploaded and stored successfully!');
     } catch (error) {
         console.error('Error uploading image:', error);
@@ -126,16 +128,26 @@ export default function HomeScreen() {
       <View style={styles.kikker}>
         <Text>Plaatsen</Text>
 
-        <TextInput style={styles.input} placeholder="Titel" />
+        <TextInput 
+        style={styles.input} 
+        onChangeText={onChangeTitle} 
+        value={titlePlaatsen} 
+        placeholder="Titel"/>
         <TextInput
           editable
           multiline
           numberOfLines={4}
           maxLength={150}
           style={styles.inputDescription}
+          onChangeText={onChangeDescription}
+          value={descriptionPlaatsen}
           placeholder="Beschrijving"
         />
-        <TextInput editable maxLength={150} style={styles.input} placeholder="Locatie" />
+        <TextInput 
+        editable 
+        maxLength={150} 
+        style={styles.input} 
+        placeholder="Locatie" />
 
         <Button title="Pick an Image from Gallery" onPress={pickImage} />
         <Button title="Take a Photo" onPress={takePhoto} />
