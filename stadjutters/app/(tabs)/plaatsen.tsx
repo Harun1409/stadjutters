@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard } from 'react-native';
+import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'; 
 import React, { useState } from 'react';
 import { useSession } from '../SessionContext'; // Custom hook to get session
@@ -126,8 +126,6 @@ export default function HomeScreen() {
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <View style={styles.kikker}>
-        <Text>Plaatsen</Text>
-
         <TextInput 
         style={styles.input} 
         onChangeText={onChangeTitle} 
@@ -149,13 +147,13 @@ export default function HomeScreen() {
         style={styles.input} 
         placeholder="Locatie" />
 
-        <Button title="Pick an Image from Gallery" onPress={pickImage} />
-        <Button title="Take a Photo" onPress={takePhoto} />
+        <Button title="Kies een afbeelding uit de Galerij" onPress={pickImage} />
+        <Button title="Maak een foto" onPress={takePhoto} />
 
         {image && (
           <View style={styles.imageContainer}>
-            <Image source={{ uri: image }} style={styles.image} />
             <Text>Selected Image:</Text>
+            <Image source={{ uri: image }} style={styles.image} />
           </View>
         )}
 
