@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList } from 'react-native';
+import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'; 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../SessionContext'; // Assuming this provides session info (user ID)
@@ -38,11 +38,11 @@ const [selectedLanguage, setSelectedLanguage] = useState();
       .select('id, description');  // Verkrijg de id en description kolommen
 
     if (error) {
-      console.error('Error retrieving categories:', error);
+      console.error('Fout bij het ophalen van categorieën:', error);
       return;
     }
 
-    console.log('Categories:', data);  // Logs de opgehaalde categorieën
+    console.log('categorieën:', data);  // Logs de opgehaalde categorieën
     setCategories(data || []);  // Zet de categorieën in de staat
   };
 
@@ -70,7 +70,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
       .select('id, description');  // Verkrijg de id en description kolommen
 
     if (error) {
-      console.error('Error retrieving materialTypes:', error);
+      console.error('Fout bij het ophalen van materialTypes:', error);
       return;
     }
 
@@ -93,7 +93,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      alert('Permission to access camera roll is required!');
+      alert('Toestemming voor toegang tot de filmrol is vereist!');
       return;
     }
 
@@ -112,7 +112,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
   const takePhoto = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
-      alert('Permission to access the camera is required!');
+      alert('Toestemming voor toegang tot de filmrol is vereist!');
       return;
     }
 
@@ -129,7 +129,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
   // Functie om de afbeelding naar Supabase te uploaden
   const uploadToDatabase = async () => {
     if (!image) {
-      alert('No image selected');
+      alert('Geen afbeelding geselecteerd');
       return;
     }
 
@@ -138,7 +138,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
     const fileName = image.split('/').pop();
     const fileExt = fileName?.split('.').pop() || 'jpeg';
     const filePath = `public/${Date.now()}.${fileExt}`;
-    console.log("Uploading image:", { uri: image, fileName, filePath });
+    console.log("Afbeelding uploaden:", { uri: image, fileName, filePath });
 
     try {
       // Lees het bestand als base64
@@ -148,7 +148,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
 
       const buffer = Buffer.from(fileContent, 'base64');
 
-      console.log("Buffer created for upload:", buffer.byteLength);
+      console.log("Buffer gemaakt voor uploaden:", buffer.byteLength);
 
       // Upload het bestand naar Supabase
       const { data, error } = await supabase.storage
@@ -161,7 +161,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
 
       if (error) throw error;
 
-      console.log('Upload successful:', data);
+      console.log('Upload successvol:', data);
 
       // Verkrijg de publieke URL van het geüploade bestand
       const publicUrl = supabase.storage
@@ -187,10 +187,10 @@ const [selectedLanguage, setSelectedLanguage] = useState();
 
       if (dbError) throw dbError;
 
-      alert('Image uploaded and stored successfully!');
+      alert('Afbeelding geüpload en succesvol opgeslagen!');
     } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Error uploading image');
+      console.error('Fout bij het uploaden van afbeelding:', error);
+      alert('Fout bij het uploaden van afbeelding:');
     } finally {
       setUploading(false);
     }
@@ -272,7 +272,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
 
         {image && (
           <View style={styles.imageContainer}>
-            <Text>Selected Image:</Text>
+            <Text>Geselecteerde afbeelding:</Text>
             <Image source={{ uri: image }} style={styles.image} />
           </View>
         )}
