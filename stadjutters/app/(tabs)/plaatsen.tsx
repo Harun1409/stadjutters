@@ -197,7 +197,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
   };
 
   return (
-    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()} >
       <View style={styles.kikker}>
         <TextInput 
           style={styles.input} 
@@ -287,7 +287,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
 const styles = StyleSheet.create({
   kikker: {
     display: 'flex',
-    flex: 1,
+    // flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -303,8 +303,7 @@ const styles = StyleSheet.create({
     margin: 12,
     borderWidth: 0.5,
     width: '85%',
-    height: 1,
-    // height: 80,
+    height: 80,
     padding: 10,
     borderColor: 'lightgray'
   },
