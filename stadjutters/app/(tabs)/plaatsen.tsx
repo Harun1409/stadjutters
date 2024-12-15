@@ -180,7 +180,8 @@ const [selectedLanguage, setSelectedLanguage] = useState();
             uid: session?.user.id,
             title: titlePlaatsen,
             description: descriptionPlaatsen,
-            category_id: valueMaterialType?.id,  // Sla de geselecteerde category_id op
+            categoryId: valueCategory?.id,
+            materialTypeId: valueMaterialType?.id
           },
         ]);
 
@@ -207,8 +208,6 @@ const [selectedLanguage, setSelectedLanguage] = useState();
         <TextInput
           editable
           multiline
-          numberOfLines={4}
-          maxLength={150}
           style={styles.inputDescription}
           onChangeText={onChangeDescription}
           value={descriptionPlaatsen}
@@ -221,55 +220,53 @@ const [selectedLanguage, setSelectedLanguage] = useState();
           placeholder="Locatie" 
         />
 
-<View style={styles.dropDownStyle}>
-  <View style={styles.dropDownContainer}>
-    <DropDownSelect
-      placeholder="Categorie"
-      toggle={() => setOpenCategory(!openCategory)} // Correct toggle logic
-      selectedData={valueCategory}
-      open={openCategory} // Use the correct state
-      data={categoryOptions} // Pass fetched category data
-      onSelect={(data) => {
-        setValueCategory(data); // Set selected category
-        setOpenCategory(false); // Close the dropdown
-      }}
-      dropDownContainerStyle={{
-        maxHeight: 200,
-        minWidth: 100,
-        borderWidth: 0.5,
-        borderColor: 'lightgray',
-        borderRadius: 8,
-        padding: 10,
-      }}
-      search
-    />
-  </View>
+        <View style={styles.dropDownStyle}>
+          <View style={styles.dropDownContainer}>
+            <DropDownSelect
+              placeholder="Categorie"
+              toggle={() => setOpenCategory(!openCategory)} // Correct toggle logic
+              selectedData={valueCategory}
+              open={openCategory} // Use the correct state
+              data={categoryOptions} // Pass fetched category data
+              onSelect={(data) => {
+                setValueCategory(data); // Set selected category
+                setOpenCategory(false); // Close the dropdown
+              }}
+              dropDownContainerStyle={{
+                maxHeight: 200,
+                minWidth: 100,
+                borderWidth: 0.5,
+                borderColor: 'lightgray',
+                borderRadius: 8,
+                padding: 10,
+              }}
+              search
+            />
+          </View>
 
-  <View style={styles.dropDownContainer}>
-    <DropDownSelect
-      placeholder="Materiaaltype"
-      toggle={() => setOpenMaterialType(!openMaterialType)}
-      selectedData={valueMaterialType}
-      open={openMaterialType}
-      data={materialTypeOptions} // Pass de opgehaalde categorieën
-      onSelect={(data) => {
-        setValueMaterialType(data); // Zet de geselecteerde categorie in de staat
-        setOpenMaterialType(false); // Sluit de dropdown
-      }}
-      dropDownContainerStyle={{
-        maxHeight: 200,
-        minWidth: 100,
-        borderWidth: 0.5,
-        borderColor: 'lightgray',
-        borderRadius: 8,
-        padding: 10,
-      }}
-      search
-    />
-  </View>
-</View>
-
-
+          <View style={styles.dropDownContainer}>
+            <DropDownSelect
+              placeholder="Materiaaltype"
+              toggle={() => setOpenMaterialType(!openMaterialType)}
+              selectedData={valueMaterialType}
+              open={openMaterialType}
+              data={materialTypeOptions} // Pass de opgehaalde categorieën
+              onSelect={(data) => {
+                setValueMaterialType(data); // Zet de geselecteerde categorie in de staat
+                setOpenMaterialType(false); // Sluit de dropdown
+              }}
+              dropDownContainerStyle={{
+                maxHeight: 200,
+                minWidth: 100,
+                borderWidth: 0.5,
+                borderColor: 'lightgray',
+                borderRadius: 8,
+                padding: 10,
+              }}
+              search
+            />
+          </View>
+        </View>
         <Button title="Kies een afbeelding uit de Galerij" onPress={pickImage} />
         <Button title="Maak een foto" onPress={takePhoto} />
 
@@ -306,7 +303,8 @@ const styles = StyleSheet.create({
     margin: 12,
     borderWidth: 0.5,
     width: '85%',
-    height: 80,
+    height: 1,
+    // height: 80,
     padding: 10,
     borderColor: 'lightgray'
   },
