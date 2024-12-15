@@ -1,13 +1,18 @@
 import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'; 
-import React, { useState } from 'react';
-import { useSession } from '../SessionContext'; // Custom hook to get session
+import React, { useState, useEffect } from 'react';
+import { useSession } from '../SessionContext'; // Assuming this provides session info (user ID)
 import { supabase } from '../../lib/supabase'; // Correct import from your supabase.tsx file
-import * as FileSystem from 'expo-file-system'; // allows you to read files from the local file system and then create a blob-like object for upload.
+import * as FileSystem from 'expo-file-system'; // Allows you to read files from the local file system
 import { Buffer } from 'buffer';
-import { title } from 'process';
-import { text } from 'stream/consumers';
+import { DropDownSelect } from 'react-native-simple-dropdown-select'; // Assuming you have this component available
 global.Buffer = Buffer;
+
+// Definieer een type voor de categorieën
+interface Category {
+  id: number;
+  description: string;
+}
 
 export default function HomeScreen() {
   const { session } = useSession(); // Assuming this provides session info (user ID)
@@ -15,8 +20,36 @@ export default function HomeScreen() {
   const [descriptionPlaatsen, onChangeDescription] = React.useState('');
   const [image, setImage] = useState<string | null>(null); // Holds the image URI
   const [uploading, setUploading] = useState(false); // Uploading state
-  
-  // Function to pick image from gallery
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState<any>(null); // For storing the selected category
+  const [categories, setCategories] = useState<Category[]>([]); // Typen van de categorieën array als Category[]
+
+  // Functie om categorieën op te halen van Supabase
+  const retrieveCategories = async () => {
+    const { data, error } = await supabase
+      .from('category')
+      .select('id, description');  // Verkrijg de id en description kolommen
+
+    if (error) {
+      console.error('Error retrieving categories:', error);
+      return;
+    }
+
+    console.log('Categories:', data);  // Logs de opgehaalde categorieën
+    setCategories(data || []);  // Zet de categorieën in de staat
+  };
+
+  useEffect(() => {
+    retrieveCategories(); // Haal categorieën op bij het laden van de component
+  }, []);
+
+  // Zet de categorieën om naar het formaat dat de dropdown verwacht
+  const categoryOptions = categories.map((category) => ({
+    id: category.id,
+    name: category.description,  // Zet description om naar 'name'
+  }));
+
+  // Functie om een afbeelding uit de galerij te kiezen
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
@@ -35,7 +68,7 @@ export default function HomeScreen() {
     }
   };
 
-  // Function to take a new photo
+  // Functie om een nieuwe foto te maken
   const takePhoto = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
@@ -53,11 +86,11 @@ export default function HomeScreen() {
     }
   };
 
-  // Function to upload the image to Supabase
+  // Functie om de afbeelding naar Supabase te uploaden
   const uploadToDatabase = async () => {
     if (!image) {
-        alert('No image selected');
-        return;
+      alert('No image selected');
+      return;
     }
 
     setUploading(true);
@@ -68,69 +101,69 @@ export default function HomeScreen() {
     console.log("Uploading image:", { uri: image, fileName, filePath });
 
     try {
-        // Read file directly as binary
-        const fileContent = await FileSystem.readAsStringAsync(image, {
-            encoding: FileSystem.EncodingType.Base64,
+      // Lees het bestand als base64
+      const fileContent = await FileSystem.readAsStringAsync(image, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+
+      const buffer = Buffer.from(fileContent, 'base64');
+
+      console.log("Buffer created for upload:", buffer.byteLength);
+
+      // Upload het bestand naar Supabase
+      const { data, error } = await supabase.storage
+        .from('UserUploadedImages')
+        .upload(filePath, buffer, {
+          contentType: `image/${fileExt}`,
+          cacheControl: '3600',
+          upsert: false,
         });
 
-        const buffer = Buffer.from(fileContent, 'base64');
+      if (error) throw error;
 
-        console.log("Buffer created for upload:", buffer.byteLength);
+      console.log('Upload successful:', data);
 
-        // Upload file to Supabase
-        const { data, error } = await supabase.storage
-            .from('UserUploadedImages')
-            .upload(filePath, buffer, {
-                contentType: `image/${fileExt}`,
-                cacheControl: '3600',
-                upsert: false,
-            });
+      // Verkrijg de publieke URL van het geüploade bestand
+      const publicUrl = supabase.storage
+        .from('UserUploadedImages')
+        .getPublicUrl(filePath).data.publicUrl;
 
-        if (error) throw error;
+      console.log('Image public URL:', publicUrl);
 
-        console.log('Upload successful:', data);
+      // Voeg metadata van de afbeelding toe aan de database
+      console.log("User ID:", session?.user?.id);
+      const { error: dbError } = await supabase
+        .from('findings')
+        .insert([
+          {
+            image_url: publicUrl,
+            uid: session?.user.id,
+            title: titlePlaatsen,
+            description: descriptionPlaatsen,
+            category_id: value?.id,  // Sla de geselecteerde category_id op
+          },
+        ]);
 
-        // Get public URL of the uploaded file
-        const publicUrl = supabase.storage
-            .from('UserUploadedImages')
-            .getPublicUrl(filePath).data.publicUrl;
+      if (dbError) throw dbError;
 
-        console.log('Image public URL:', publicUrl);
-
-          // Insert image metadata into the database
-          console.log("User ID:", session?.user?.id);
-        const { error: dbError } = await supabase
-            .from('findings')
-            .insert([
-                {
-                    image_url: publicUrl,
-                    uid: session?.user.id,
-                    title: titlePlaatsen,
-                    description: descriptionPlaatsen,
-                },
-            ]);
-
-        if (dbError) throw dbError;
-
-        alert('Image uploaded and stored successfully!');
+      alert('Image uploaded and stored successfully!');
     } catch (error) {
-        console.error('Error uploading image:', error);
-        alert('Error uploading image');
+      console.error('Error uploading image:', error);
+      alert('Error uploading image');
     } finally {
-        setUploading(false);
+      setUploading(false);
     }
-};
-
-
+  };
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <View style={styles.kikker}>
         <TextInput 
-        style={styles.input} 
-        onChangeText={onChangeTitle} 
-        value={titlePlaatsen} 
-        placeholder="Titel"/>
+          style={styles.input} 
+          onChangeText={onChangeTitle} 
+          value={titlePlaatsen} 
+          placeholder="Titel"
+        />
         <TextInput
           editable
           multiline
@@ -142,10 +175,31 @@ export default function HomeScreen() {
           placeholder="Beschrijving"
         />
         <TextInput 
-        editable 
-        maxLength={150} 
-        style={styles.input} 
-        placeholder="Locatie" />
+          editable 
+          maxLength={150} 
+          style={styles.input} 
+          placeholder="Locatie" 
+        />
+
+        <DropDownSelect
+          toggle={() => setOpen(!open)}
+          selectedData={value}
+          open={open}
+          data={categoryOptions}  // Pass de opgehaalde categorieën
+          onSelect={(data) => {
+            setValue(data);  // Zet de geselecteerde categorie in de staat
+            setOpen(false);   // Sluit de dropdown
+          }}
+          dropDownContainerStyle={{
+            maxHeight: 400,
+            minWidth: 200,
+          }}
+          search
+          subViewStyle={{
+            backgroundColor: 'pink',
+            borderWidth: 1,
+          }}
+        />
 
         <Button title="Kies een afbeelding uit de Galerij" onPress={pickImage} />
         <Button title="Maak een foto" onPress={takePhoto} />
