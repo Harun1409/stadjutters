@@ -8,11 +8,6 @@ import { Buffer } from 'buffer';
 import { DropDownSelect } from 'react-native-simple-dropdown-select'; // Assuming you have this component available
 global.Buffer = Buffer;
 
-// Definieer een type voor de categorieën
-interface Category {
-  id: number;
-  description: string;
-}
 
 export default function HomeScreen() {
   const { session } = useSession(); // Assuming this provides session info (user ID)
@@ -20,9 +15,21 @@ export default function HomeScreen() {
   const [descriptionPlaatsen, onChangeDescription] = React.useState('');
   const [image, setImage] = useState<string | null>(null); // Holds the image URI
   const [uploading, setUploading] = useState(false); // Uploading state
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<any>(null); // For storing the selected category
+  const [openCategory, setOpenCategory] = useState(false);
+  const [valueCategory, setValueCategory] = useState<any>(null); // For storing the selected category
   const [categories, setCategories] = useState<Category[]>([]); // Typen van de categorieën array als Category[]
+  const [openMaterialType, setOpenMaterialType] = useState(false);
+  const [valueMaterialType, setValueMaterialType] = useState<any>(null);
+  const [materialTypes, setmaterialTypes] = useState<MaterialType[]>([]); // Typen van de materialTypes array als MaterialType[]
+
+//--------------------
+const [selectedLanguage, setSelectedLanguage] = useState();
+//--------------------
+
+  interface Category {
+    id: number;
+    description: string;
+  }
 
   // Functie om categorieën op te halen van Supabase
   const retrieveCategories = async () => {
@@ -48,6 +55,39 @@ export default function HomeScreen() {
     id: category.id,
     name: category.description,  // Zet description om naar 'name'
   }));
+
+  //-----------------------------------------------
+// Definieer een type voor de materialTypes
+    interface MaterialType {
+    id: number;
+    description: string;
+  }
+
+  // Functie om categorieën op te halen van Supabase
+  const retrieveMaterialType = async () => {
+    const { data, error } = await supabase
+      .from('materialType')
+      .select('id, description');  // Verkrijg de id en description kolommen
+
+    if (error) {
+      console.error('Error retrieving materialTypes:', error);
+      return;
+    }
+
+    console.log('MaterialTypes:', data);  // Logs de opgehaalde categorieën
+    setmaterialTypes(data || []);  // Zet de categorieën in de staat
+  };
+
+  useEffect(() => {
+    retrieveMaterialType(); // Haal categorieën op bij het laden van de component
+  }, []);
+
+  // Zet de categorieën om naar het formaat dat de dropdown verwacht
+  const materialTypeOptions = materialTypes.map((materiaaltype) => ({
+    id: materiaaltype.id,
+    name: materiaaltype.description,  // Zet description om naar 'name'
+  }));
+  //-----------------------------------------------
 
   // Functie om een afbeelding uit de galerij te kiezen
   const pickImage = async () => {
@@ -140,7 +180,7 @@ export default function HomeScreen() {
             uid: session?.user.id,
             title: titlePlaatsen,
             description: descriptionPlaatsen,
-            category_id: value?.id,  // Sla de geselecteerde category_id op
+            category_id: valueMaterialType?.id,  // Sla de geselecteerde category_id op
           },
         ]);
 
@@ -181,25 +221,54 @@ export default function HomeScreen() {
           placeholder="Locatie" 
         />
 
-        <DropDownSelect
-          toggle={() => setOpen(!open)}
-          selectedData={value}
-          open={open}
-          data={categoryOptions}  // Pass de opgehaalde categorieën
-          onSelect={(data) => {
-            setValue(data);  // Zet de geselecteerde categorie in de staat
-            setOpen(false);   // Sluit de dropdown
-          }}
-          dropDownContainerStyle={{
-            maxHeight: 400,
-            minWidth: 200,
-          }}
-          search
-          subViewStyle={{
-            backgroundColor: 'pink',
-            borderWidth: 1,
-          }}
-        />
+<View style={styles.dropDownStyle}>
+  <View style={styles.dropDownContainer}>
+    <DropDownSelect
+      placeholder="Categorie"
+      toggle={() => setOpenCategory(!openCategory)} // Correct toggle logic
+      selectedData={valueCategory}
+      open={openCategory} // Use the correct state
+      data={categoryOptions} // Pass fetched category data
+      onSelect={(data) => {
+        setValueCategory(data); // Set selected category
+        setOpenCategory(false); // Close the dropdown
+      }}
+      dropDownContainerStyle={{
+        maxHeight: 200,
+        minWidth: 100,
+        borderWidth: 0.5,
+        borderColor: 'lightgray',
+        borderRadius: 8,
+        padding: 10,
+      }}
+      search
+    />
+  </View>
+
+  <View style={styles.dropDownContainer}>
+    <DropDownSelect
+      placeholder="Materiaaltype"
+      toggle={() => setOpenMaterialType(!openMaterialType)}
+      selectedData={valueMaterialType}
+      open={openMaterialType}
+      data={materialTypeOptions} // Pass de opgehaalde categorieën
+      onSelect={(data) => {
+        setValueMaterialType(data); // Zet de geselecteerde categorie in de staat
+        setOpenMaterialType(false); // Sluit de dropdown
+      }}
+      dropDownContainerStyle={{
+        maxHeight: 200,
+        minWidth: 100,
+        borderWidth: 0.5,
+        borderColor: 'lightgray',
+        borderRadius: 8,
+        padding: 10,
+      }}
+      search
+    />
+  </View>
+</View>
+
 
         <Button title="Kies een afbeelding uit de Galerij" onPress={pickImage} />
         <Button title="Maak een foto" onPress={takePhoto} />
@@ -228,16 +297,18 @@ const styles = StyleSheet.create({
   },
   input: {
     margin: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     width: '85%',
     padding: 10,
+    borderColor: 'lightgray'
   },
   inputDescription: {
     margin: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     width: '85%',
     height: 80,
     padding: 10,
+    borderColor: 'lightgray'
   },
   imageContainer: {
     marginTop: 20,
@@ -248,5 +319,16 @@ const styles = StyleSheet.create({
     height: 200,
     resizeMode: 'cover',
     marginBottom: 10,
+  },
+  dropDownStyle: {
+    flexDirection: 'row', // Zorgt ervoor dat de elementen naast elkaar komen
+    justifyContent: 'space-between', // Ruimte tussen de dropdowns
+    alignItems: 'center', // Optioneel: om de items verticaal te centreren
+    width: '88%',
+    marginVertical: 10, // Voeg wat verticale ruimte toe
+  },
+  dropDownContainer: {
+    flex: 1, // Zorgt ervoor dat beide dropdowns evenveel ruimte innemen
+    marginHorizontal: 5, // Voeg wat ruimte tussen de dropdowns toe
   },
 });
