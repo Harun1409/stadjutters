@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList } from 'react-native';
+import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList, ScrollView } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'; 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../SessionContext'; // Assuming this provides session info (user ID)
@@ -8,11 +8,6 @@ import { Buffer } from 'buffer';
 import { DropDownSelect } from 'react-native-simple-dropdown-select'; // Assuming you have this component available
 global.Buffer = Buffer;
 
-// Definieer een type voor de categorieën
-interface Category {
-  id: number;
-  description: string;
-}
 
 export default function HomeScreen() {
   const { session } = useSession(); // Assuming this provides session info (user ID)
@@ -20,9 +15,21 @@ export default function HomeScreen() {
   const [descriptionPlaatsen, onChangeDescription] = React.useState('');
   const [image, setImage] = useState<string | null>(null); // Holds the image URI
   const [uploading, setUploading] = useState(false); // Uploading state
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState<any>(null); // For storing the selected category
+  const [openCategory, setOpenCategory] = useState(false);
+  const [valueCategory, setValueCategory] = useState<any>(null); // For storing the selected category
   const [categories, setCategories] = useState<Category[]>([]); // Typen van de categorieën array als Category[]
+  const [openMaterialType, setOpenMaterialType] = useState(false);
+  const [valueMaterialType, setValueMaterialType] = useState<any>(null);
+  const [materialTypes, setmaterialTypes] = useState<MaterialType[]>([]); // Typen van de materialTypes array als MaterialType[]
+
+//--------------------
+const [selectedLanguage, setSelectedLanguage] = useState();
+//--------------------
+
+  interface Category {
+    id: number;
+    description: string;
+  }
 
   // Functie om categorieën op te halen van Supabase
   const retrieveCategories = async () => {
@@ -31,11 +38,11 @@ export default function HomeScreen() {
       .select('id, description');  // Verkrijg de id en description kolommen
 
     if (error) {
-      console.error('Error retrieving categories:', error);
+      console.error('Fout bij het ophalen van categorieën:', error);
       return;
     }
 
-    console.log('Categories:', data);  // Logs de opgehaalde categorieën
+    console.log('categorieën:', data);  // Logs de opgehaalde categorieën
     setCategories(data || []);  // Zet de categorieën in de staat
   };
 
@@ -49,11 +56,44 @@ export default function HomeScreen() {
     name: category.description,  // Zet description om naar 'name'
   }));
 
+  //-----------------------------------------------
+// Definieer een type voor de materialTypes
+    interface MaterialType {
+    id: number;
+    description: string;
+  }
+
+  // Functie om categorieën op te halen van Supabase
+  const retrieveMaterialType = async () => {
+    const { data, error } = await supabase
+      .from('materialType')
+      .select('id, description');  // Verkrijg de id en description kolommen
+
+    if (error) {
+      console.error('Fout bij het ophalen van materialTypes:', error);
+      return;
+    }
+
+    console.log('MaterialTypes:', data);  // Logs de opgehaalde categorieën
+    setmaterialTypes(data || []);  // Zet de categorieën in de staat
+  };
+
+  useEffect(() => {
+    retrieveMaterialType(); // Haal categorieën op bij het laden van de component
+  }, []);
+
+  // Zet de categorieën om naar het formaat dat de dropdown verwacht
+  const materialTypeOptions = materialTypes.map((materiaaltype) => ({
+    id: materiaaltype.id,
+    name: materiaaltype.description,  // Zet description om naar 'name'
+  }));
+  //-----------------------------------------------
+
   // Functie om een afbeelding uit de galerij te kiezen
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
-      alert('Permission to access camera roll is required!');
+      alert('Toestemming voor toegang tot de filmrol is vereist!');
       return;
     }
 
@@ -72,7 +112,7 @@ export default function HomeScreen() {
   const takePhoto = async () => {
     const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
     if (!permissionResult.granted) {
-      alert('Permission to access the camera is required!');
+      alert('Toestemming voor toegang tot de filmrol is vereist!');
       return;
     }
 
@@ -89,7 +129,7 @@ export default function HomeScreen() {
   // Functie om de afbeelding naar Supabase te uploaden
   const uploadToDatabase = async () => {
     if (!image) {
-      alert('No image selected');
+      alert('Geen afbeelding geselecteerd');
       return;
     }
 
@@ -98,7 +138,7 @@ export default function HomeScreen() {
     const fileName = image.split('/').pop();
     const fileExt = fileName?.split('.').pop() || 'jpeg';
     const filePath = `public/${Date.now()}.${fileExt}`;
-    console.log("Uploading image:", { uri: image, fileName, filePath });
+    console.log("Afbeelding uploaden:", { uri: image, fileName, filePath });
 
     try {
       // Lees het bestand als base64
@@ -108,7 +148,7 @@ export default function HomeScreen() {
 
       const buffer = Buffer.from(fileContent, 'base64');
 
-      console.log("Buffer created for upload:", buffer.byteLength);
+      console.log("Buffer gemaakt voor uploaden:", buffer.byteLength);
 
       // Upload het bestand naar Supabase
       const { data, error } = await supabase.storage
@@ -121,7 +161,7 @@ export default function HomeScreen() {
 
       if (error) throw error;
 
-      console.log('Upload successful:', data);
+      console.log('Upload successvol:', data);
 
       // Verkrijg de publieke URL van het geüploade bestand
       const publicUrl = supabase.storage
@@ -140,23 +180,24 @@ export default function HomeScreen() {
             uid: session?.user.id,
             title: titlePlaatsen,
             description: descriptionPlaatsen,
-            category_id: value?.id,  // Sla de geselecteerde category_id op
+            categoryId: valueCategory?.id,
+            materialTypeId: valueMaterialType?.id
           },
         ]);
 
       if (dbError) throw dbError;
 
-      alert('Image uploaded and stored successfully!');
+      alert('Afbeelding geüpload en succesvol opgeslagen!');
     } catch (error) {
-      console.error('Error uploading image:', error);
-      alert('Error uploading image');
+      console.error('Fout bij het uploaden van afbeelding:', error);
+      alert('Fout bij het uploaden van afbeelding:');
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()} >
       <View style={styles.kikker}>
         <TextInput 
           style={styles.input} 
@@ -167,8 +208,6 @@ export default function HomeScreen() {
         <TextInput
           editable
           multiline
-          numberOfLines={4}
-          maxLength={150}
           style={styles.inputDescription}
           onChangeText={onChangeDescription}
           value={descriptionPlaatsen}
@@ -181,32 +220,59 @@ export default function HomeScreen() {
           placeholder="Locatie" 
         />
 
-        <DropDownSelect
-          toggle={() => setOpen(!open)}
-          selectedData={value}
-          open={open}
-          data={categoryOptions}  // Pass de opgehaalde categorieën
-          onSelect={(data) => {
-            setValue(data);  // Zet de geselecteerde categorie in de staat
-            setOpen(false);   // Sluit de dropdown
-          }}
-          dropDownContainerStyle={{
-            maxHeight: 400,
-            minWidth: 200,
-          }}
-          search
-          subViewStyle={{
-            backgroundColor: 'pink',
-            borderWidth: 1,
-          }}
-        />
+        <View style={styles.dropDownStyle}>
+          <View style={styles.dropDownContainer}>
+            <DropDownSelect
+              placeholder="Categorie"
+              toggle={() => setOpenCategory(!openCategory)} // Correct toggle logic
+              selectedData={valueCategory}
+              open={openCategory} // Use the correct state
+              data={categoryOptions} // Pass fetched category data
+              onSelect={(data) => {
+                setValueCategory(data); // Set selected category
+                setOpenCategory(false); // Close the dropdown
+              }}
+              dropDownContainerStyle={{
+                maxHeight: 200,
+                minWidth: 100,
+                borderWidth: 0.5,
+                borderColor: 'lightgray',
+                borderRadius: 8,
+                padding: 10,
+              }}
+              search
+            />
+          </View>
 
+          <View style={styles.dropDownContainer}>
+            <DropDownSelect
+              placeholder="Materiaaltype"
+              toggle={() => setOpenMaterialType(!openMaterialType)}
+              selectedData={valueMaterialType}
+              open={openMaterialType}
+              data={materialTypeOptions} // Pass de opgehaalde categorieën
+              onSelect={(data) => {
+                setValueMaterialType(data); // Zet de geselecteerde categorie in de staat
+                setOpenMaterialType(false); // Sluit de dropdown
+              }}
+              dropDownContainerStyle={{
+                maxHeight: 200,
+                minWidth: 100,
+                borderWidth: 0.5,
+                borderColor: 'lightgray',
+                borderRadius: 8,
+                padding: 10,
+              }}
+              search
+            />
+          </View>
+        </View>
         <Button title="Kies een afbeelding uit de Galerij" onPress={pickImage} />
         <Button title="Maak een foto" onPress={takePhoto} />
 
         {image && (
           <View style={styles.imageContainer}>
-            <Text>Selected Image:</Text>
+            <Text>Geselecteerde afbeelding:</Text>
             <Image source={{ uri: image }} style={styles.image} />
           </View>
         )}
@@ -221,23 +287,25 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   kikker: {
     display: 'flex',
-    flex: 1,
+    // flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   input: {
     margin: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     width: '85%',
     padding: 10,
+    borderColor: 'lightgray'
   },
   inputDescription: {
     margin: 12,
-    borderWidth: 1,
+    borderWidth: 0.5,
     width: '85%',
     height: 80,
     padding: 10,
+    borderColor: 'lightgray'
   },
   imageContainer: {
     marginTop: 20,
@@ -248,5 +316,16 @@ const styles = StyleSheet.create({
     height: 200,
     resizeMode: 'cover',
     marginBottom: 10,
+  },
+  dropDownStyle: {
+    flexDirection: 'row', // Zorgt ervoor dat de elementen naast elkaar komen
+    justifyContent: 'space-between', // Ruimte tussen de dropdowns
+    alignItems: 'center', // Optioneel: om de items verticaal te centreren
+    width: '88%',
+    marginVertical: 10, // Voeg wat verticale ruimte toe
+  },
+  dropDownContainer: {
+    flex: 1, // Zorgt ervoor dat beide dropdowns evenveel ruimte innemen
+    marginHorizontal: 5, // Voeg wat ruimte tussen de dropdowns toe
   },
 });
