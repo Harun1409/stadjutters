@@ -29,7 +29,7 @@ export default function HomeScreen() {
   const [openMaterialType, setOpenMaterialType] = useState(false);
   const [valueMaterialType, setValueMaterialType] = useState<any>(null);
   const [materialTypes, setmaterialTypes] = useState<MaterialType[]>([]); // Typen van de materialTypes array als MaterialType[]
-  const [selected, setSelected] = useState('Huisvondst'); // State voor de geselecteerde segmentoptie (First of Second)
+  const [selectedFindingType, setselectedFindingType] = useState('Huisvondst'); // State voor de geselecteerde segmentoptie (First of Second)
   
   
 
@@ -226,6 +226,7 @@ const getStadFromProfile = async () => {
             categoryId: valueCategory?.id,
             materialTypeId: valueMaterialType?.id,
             stad: stad, 
+            findingTypeId: selectedFindingType
           },
         ]);
   
@@ -311,14 +312,14 @@ const getStadFromProfile = async () => {
           <TouchableOpacity
             style={[
               styles.segmentButton,
-              selected === 'Huisvondst' && styles.activeSegmentButton,
+              selectedFindingType === 'Huisvondst' && styles.activeSegmentButton,
             ]}
-            onPress={() => setSelected('Huisvondst')}
+            onPress={() => setselectedFindingType('Huisvondst')}
           >
             <Text
               style={[
                 styles.segmentButtonText,
-                selected === 'Huisvondst' && styles.activeSegmentButtonText,
+                selectedFindingType === 'Huisvondst' && styles.activeSegmentButtonText,
               ]}
             >
               Huisvondst
@@ -328,14 +329,14 @@ const getStadFromProfile = async () => {
           <TouchableOpacity
             style={[
               styles.segmentButton,
-              selected === 'Straatvondst' && styles.activeSegmentButton,
+              selectedFindingType === 'Straatvondst' && styles.activeSegmentButton,
             ]}
-            onPress={() => setSelected('Straatvondst')}
+            onPress={() => setselectedFindingType('Straatvondst')}
           >
             <Text
               style={[
                 styles.segmentButtonText,
-                selected === 'Straatvondst' && styles.activeSegmentButtonText,
+                selectedFindingType === 'Straatvondst' && styles.activeSegmentButtonText,
               ]}
             >
               Straatvondst
