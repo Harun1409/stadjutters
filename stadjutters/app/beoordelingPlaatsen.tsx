@@ -1,22 +1,65 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, TextInput, View, Button } from 'react-native';
 import StarRating from 'react-native-star-rating-widget';
+import { supabase } from '../lib/supabase'; // Zorg ervoor dat je de juiste import hebt voor Supabase
+
 
 export default function BeoordelingPlaatsen() {
   const [rating, setRating] = useState(0); // Sterrenbeoordeling
   const [description, setDescription] = useState(''); // Beschrijving
+  const [loading, setLoading] = useState(false); // Voor een laadindicator
 
-  const handleSubmit = () => {
-    // Actie wanneer de beoordeling wordt ingediend
-    console.log(`Rating: ${rating}`);
-    console.log(`Beschrijving: ${description}`);
-    alert(`Beoordeling ingediend! Score: ${rating}, Beschrijving: "${description}"`);
+  const handleSubmit = async () => {
+    setLoading(true);
+    try {
+      // Haal de ingelogde gebruiker-ID op via Supabase auth
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        console.error('Gebruiker niet ingelogd:', userError);
+        alert('Je moet ingelogd zijn om een beoordeling te plaatsen.');
+        return;
+      }
+
+      const userId = user.id;
+
+      // Voeg beoordeling toe aan de database
+      const { data, error } = await supabase
+        .from('UserReview') // Tabelnaam in Supabase
+        .insert([
+          {
+            user_id: userId, // Gebruik de ID van de ingelogde gebruiker
+            rating: rating, // Kolomnaam in Supabase
+            description: description, // Kolomnaam in Supabase
+            created_at: new Date().toISOString(), // Tijdstempel
+          },
+        ]);
+
+      if (error) {
+        console.error('Fout bij het toevoegen van beoordeling:', error.message);
+        alert('Er ging iets mis bij het indienen van je beoordeling.');
+      } else {
+        console.log('Beoordeling succesvol toegevoegd:', data);
+        alert('Beoordeling succesvol ingediend!');
+        // Reset de inputs na succesvolle indiening
+        setRating(0);
+        setDescription('');
+      }
+    } catch (err) {
+      console.error('Onverwachte fout:', err);
+      alert('Onverwachte fout opgetreden.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Plaats je Beoordeling</Text>
-      
+
       {/* Sterrenbeoordeling */}
       <StarRating
         rating={rating}
@@ -24,7 +67,6 @@ export default function BeoordelingPlaatsen() {
         starSize={30} // Grootte van de sterren
         color="#FFD700" // Kleur van de sterren
       />
-      {/* <Text style={styles.label}>Je hebt {rating} sterren gegeven.</Text> */}
 
       {/* Beschrijving */}
       <TextInput
@@ -36,7 +78,11 @@ export default function BeoordelingPlaatsen() {
       />
 
       {/* Indienen */}
-      <Button title="Beoordeling Indienen" onPress={handleSubmit} />
+      <Button
+        title={loading ? 'Indienen...' : 'Beoordeling Indienen'}
+        onPress={handleSubmit}
+        disabled={loading || rating === 0 || !description.trim()}
+      />
     </View>
   );
 }
@@ -50,14 +96,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    alignItems:"baseline",
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 20,
-  },
-  label: {
-    fontSize: 16,
-    marginVertical: 10,
   },
   input: {
     height: 100,
@@ -69,6 +110,6 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     marginTop: 20,
     marginBottom: 20,
-    textAlignVertical: 'top', // Zorgt ervoor dat de tekst bovenaan begint
+    textAlignVertical: 'top',
   },
 });
