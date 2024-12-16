@@ -345,17 +345,32 @@ const getStadFromProfile = async () => {
         </View>
         <View style={styles.segmentedControlContent}>
         </View>
-        <Button title="Kies een afbeelding uit de Galerij" onPress={pickImage} />
-        <Button title="Maak een foto" onPress={takePhoto} />
-
+        <View style={styles.dropDownStyle}>
+          <View style={styles.dropDownContainer}>
+            <TouchableOpacity style={styles.customButton} onPress={pickImage}>
+              <Text style={styles.buttonText}>Foto uit gallerij</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.dropDownContainer}>
+            <TouchableOpacity style={styles.customButton} onPress={takePhoto}>
+              <Text style={styles.buttonText}>Maak foto</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+        
         {image && (
           <View style={styles.imageContainer}>
             <Text>Geselecteerde afbeelding:</Text>
             <Image source={{ uri: image }} style={styles.image} />
           </View>
         )}
-        <Button title="Plaatsen" onPress={uploadToDatabase} disabled={uploading} />
-        {uploading && <Text>Uploading...</Text>}
+        <TouchableOpacity
+  style={[styles.customButton, uploading && styles.customButton]}
+  onPress={uploadToDatabase}
+  disabled={uploading}
+>
+  <Text style={styles.buttonText}>Plaatsen</Text>
+</TouchableOpacity>
       </View>
       </ScrollView>
     </TouchableWithoutFeedback>
@@ -410,7 +425,7 @@ const styles = StyleSheet.create({
     width: '85%',
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: 'blue',
+    borderColor: '#3498db',
     borderRadius: 25,
     overflow: 'hidden',
     backgroundColor: 'white',
@@ -422,10 +437,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeSegmentButton: {
-    backgroundColor: 'blue',
+    backgroundColor: '#3498db',
   },
   segmentButtonText: {
-    color: 'blue',
+    color: '#3498db',
     fontWeight: '600',
   },
   activeSegmentButtonText: {
@@ -438,5 +453,19 @@ const styles = StyleSheet.create({
   segmentedControlContentText: {
     fontSize: 16,
     fontWeight: '500',
+  },
+  customButton: {
+    backgroundColor: '#3498db',
+    paddingVertical: 12,
+    paddingHorizontal: 20, 
+    borderRadius: 5, 
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center', 
+  },
+  buttonText: {
+    color: 'white', 
+    fontSize: 15, 
+    fontWeight: 'bold', 
   },
 });
