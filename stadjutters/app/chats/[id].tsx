@@ -57,6 +57,7 @@ const sendMessageToBackend = async (
     return data;
 };
 
+
 export default function ChatPage() {
     const pathname = usePathname();
     const receiverId = pathname.split('/').pop(); // Extract receiver ID from the URL
@@ -86,7 +87,6 @@ export default function ChatPage() {
         };
     }, []);
 
-    // Fetch chat messages
     useEffect(() => {
         const loadMessages = async () => {
             if (session?.user?.id && receiverId) {
@@ -94,6 +94,10 @@ export default function ChatPage() {
 
                 console.log('Fetched messages:', fetchedMessages); // Log alle berichten
                 setMessages(fetchedMessages);
+
+                // Mark all received messages as read
+                await markMessagesAsRead(receiverId, session.user.id);
+
                 setLoading(false);
             }
         };
@@ -101,7 +105,20 @@ export default function ChatPage() {
         loadMessages();
     }, [session, receiverId]);
 
-    // Chatmessages updaten in realtime
+    const markMessagesAsRead = async (receiverId: string, userId: string) => {
+        const { data, error } = await supabase
+            .from('chatmessage')
+            .update({ is_read: true })
+            .eq('receiver_id', userId)
+            .eq('sender_id', receiverId);
+
+        if (error) {
+            console.error('Error updating is_read:', error);
+        } else {
+            console.log('Updated messages to read:', data);
+        }
+    };
+
     useEffect(() => {
         const setupRealTime = async () => {
             if (!session?.user?.id || !receiverId) return;
@@ -111,16 +128,31 @@ export default function ChatPage() {
                 .on(
                     'postgres_changes',
                     {
-                        event: 'INSERT',
+                        event: '*',
                         schema: 'public',
                         table: 'chatmessage',
-                        filter: `sender_id=eq.${receiverId},receiver_id=eq.${receiverId}`,
+                        filter: `or(sender_id.eq.${receiverId},receiver_id.eq.${receiverId})`,
                     },
                     (payload) => {
-                        const newMessage = payload.new;
+                        console.log('Realtime update:', payload);
 
-                        // Voeg nieuwe berichten toe aan de huidige lijst
-                        setMessages((prevMessages) => [...prevMessages, newMessage]);
+                        if (payload.eventType === 'UPDATE') {
+                            const updatedMessage = payload.new;
+
+                            setMessages((prevMessages) =>
+                                prevMessages.map((msg) =>
+                                    msg.id === updatedMessage.id
+                                        ? { ...msg, is_read: updatedMessage.is_read }
+                                        : msg
+                                )
+                            );
+                        }
+
+                        if (payload.eventType === 'INSERT') {
+                            const newMessage = payload.new;
+
+                            setMessages((prevMessages) => [...prevMessages, newMessage]);
+                        }
                     }
                 )
                 .subscribe();
