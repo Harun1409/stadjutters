@@ -6,6 +6,8 @@ import { supabase } from '../../lib/supabase'; // Correct import from your supab
 import * as FileSystem from 'expo-file-system'; // Allows you to read files from the local file system
 import { Buffer } from 'buffer';
 import { DropDownSelect } from 'react-native-simple-dropdown-select'; // Assuming you have this component available
+
+
 global.Buffer = Buffer;
 
 // Suppress the warning about VirtualizedLists (flatlists/drowpdownboxes have their own scrollview and can therefore not be wrapped in another scrollview.
