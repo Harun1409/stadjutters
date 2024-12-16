@@ -26,12 +26,27 @@ export default function BeoordelingPlaatsen() {
 
       const userId = user.id;
 
+      const{data:profileData, error:profileError } = await supabase
+      .from ('profiles')
+      .select('username')
+      .eq('id', userId)
+      .single();
+      
+      if (profileError || !profileData ){
+        console.error('Fout bij het ophalen van de username:', profileError?.message)
+        alert('kon de Username niet ophalen. probeer het opnieuw.');
+        return;
+      }
+
+      const username = profileData.username;
+
       // Voeg beoordeling toe aan de database
       const { data, error } = await supabase
         .from('UserReview') // Tabelnaam in Supabase
         .insert([
           {
             user_id: userId, // Gebruik de ID van de ingelogde gebruiker
+            user_username: profileData.username, //Gebruik de username van de ingelogde gebruiker
             rating: rating, // Kolomnaam in Supabase
             description: description, // Kolomnaam in Supabase
             created_at: new Date().toISOString(), // Tijdstempel
