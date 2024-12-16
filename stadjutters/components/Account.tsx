@@ -8,6 +8,7 @@ export default function Account({ session }: { session: Session }) {
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState('')
   const [website, setWebsite] = useState('')
+  const [stad, setStad] = useState('')
   const [avatarUrl, setAvatarUrl] = useState('')
   const [statusMessage, setStatusMessage] = useState('')
 
@@ -31,7 +32,7 @@ export default function Account({ session }: { session: Session }) {
 
       const { data, error, status } = await supabase
         .from('profiles')
-        .select(`username, website, avatar_url`)
+        .select(`username, website, avatar_url, stad`)
         .eq('id', session?.user.id)
         .single()
       if (error && status !== 406) {
@@ -41,6 +42,7 @@ export default function Account({ session }: { session: Session }) {
       if (data) {
         setUsername(data.username)
         setWebsite(data.website)
+        setStad(data.stad)
         setAvatarUrl(data.avatar_url)
       }
     } catch (error) {
@@ -56,10 +58,12 @@ export default function Account({ session }: { session: Session }) {
     username,
     website,
     avatar_url,
+    stad,
   }: {
     username: string
     website: string
     avatar_url: string
+    stad: string
   }) {
     try {
       setLoading(true)
@@ -68,6 +72,7 @@ export default function Account({ session }: { session: Session }) {
       const updates = {
         id: session?.user.id,
         username,
+        stad,
         website,
         avatar_url,
         updated_at: new Date(),
@@ -99,6 +104,9 @@ export default function Account({ session }: { session: Session }) {
       <View style={styles.verticallySpaced}>
         <Input label="Gebruikersnaam" value={username || ''} onChangeText={(text) => setUsername(text)} />
       </View>
+      <View style={styles.verticallySpaced}>
+        <Input label="Stad" value={stad || ''} onChangeText={(text) => setStad(text)} />
+      </View>
      
 
       <View style={[styles.verticallySpaced, styles.mt20]}>
@@ -110,7 +118,7 @@ export default function Account({ session }: { session: Session }) {
           backgroundColor: '#7A3038',
         }}
           title={loading ? 'Loading ...' : 'Update'}
-          onPress={() => updateProfile({ username, website, avatar_url: avatarUrl })}
+          onPress={() => updateProfile({ username, website, stad, avatar_url: avatarUrl })}
           disabled={loading}
         />
       </View>

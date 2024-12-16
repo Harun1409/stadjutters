@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList, ScrollView } from 'react-native';
+import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList, ScrollView, LogBox } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'; 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../SessionContext'; // Assuming this provides session info (user ID)
@@ -7,6 +7,12 @@ import * as FileSystem from 'expo-file-system'; // Allows you to read files from
 import { Buffer } from 'buffer';
 import { DropDownSelect } from 'react-native-simple-dropdown-select'; // Assuming you have this component available
 global.Buffer = Buffer;
+
+// Suppress the warning about VirtualizedLists (flatlists/drowpdownboxes have their own scrollview and can therefore not be wrapped in another scrollview.
+// if still done an error occurs but actually does no harm. below line suppresses the warning)
+LogBox.ignoreLogs([
+  'VirtualizedLists should never be nested inside plain ScrollViews',
+]);
 
 
 export default function HomeScreen() {
@@ -25,6 +31,26 @@ export default function HomeScreen() {
 //--------------------
 const [selectedLanguage, setSelectedLanguage] = useState();
 //--------------------
+// Stad ophalen van profiles in schema public
+const getStadFromProfile = async () => {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('stad')
+      .eq('id', session?.user.id) // Haalt stad op voor de ingelogde gebruiker
+      .single(); // Verwacht slechts één rij
+
+    if (error) {
+      console.error('Fout bij het ophalen van stad:', error);
+      return null;
+    }
+
+    return data.stad; // Geeft de stad terug
+  } catch (error) {
+    console.error('Onverwachte fout bij het ophalen van stad:', error);
+    return null;
+  }
+};
 
   interface Category {
     id: number;
@@ -89,6 +115,8 @@ const [selectedLanguage, setSelectedLanguage] = useState();
   }));
   //-----------------------------------------------
 
+
+
   // Functie om een afbeelding uit de galerij te kiezen
   const pickImage = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -128,28 +156,29 @@ const [selectedLanguage, setSelectedLanguage] = useState();
 
   // Functie om de afbeelding naar Supabase te uploaden
   const uploadToDatabase = async () => {
+    
     if (!image) {
       alert('Geen afbeelding geselecteerd');
       return;
     }
-
+  
     setUploading(true);
-
+  
     const fileName = image.split('/').pop();
     const fileExt = fileName?.split('.').pop() || 'jpeg';
     const filePath = `public/${Date.now()}.${fileExt}`;
     console.log("Afbeelding uploaden:", { uri: image, fileName, filePath });
-
+  
     try {
       // Lees het bestand als base64
       const fileContent = await FileSystem.readAsStringAsync(image, {
         encoding: FileSystem.EncodingType.Base64,
       });
-
+  
       const buffer = Buffer.from(fileContent, 'base64');
-
+  
       console.log("Buffer gemaakt voor uploaden:", buffer.byteLength);
-
+  
       // Upload het bestand naar Supabase
       const { data, error } = await supabase.storage
         .from('UserUploadedImages')
@@ -158,20 +187,29 @@ const [selectedLanguage, setSelectedLanguage] = useState();
           cacheControl: '3600',
           upsert: false,
         });
-
+  
       if (error) throw error;
-
+  
       console.log('Upload successvol:', data);
-
+  
       // Verkrijg de publieke URL van het geüploade bestand
       const publicUrl = supabase.storage
         .from('UserUploadedImages')
         .getPublicUrl(filePath).data.publicUrl;
-
+  
       console.log('Image public URL:', publicUrl);
-
-      // Voeg metadata van de afbeelding toe aan de database
+  
+      // Haal de stad op uit de gebruikersprofiel met de functie getStadFromProfile
+      const stad = await getStadFromProfile(); // Haal de stad van de gebruiker
+      
+    if(!stad){
+      alert("Geef een woonplaats op in je account om door te kunnen gaan")
+      return;
+    }
+  
       console.log("User ID:", session?.user?.id);
+  
+      // Voeg metadata van de afbeelding toe aan de database
       const { error: dbError } = await supabase
         .from('findings')
         .insert([
@@ -181,12 +219,13 @@ const [selectedLanguage, setSelectedLanguage] = useState();
             title: titlePlaatsen,
             description: descriptionPlaatsen,
             categoryId: valueCategory?.id,
-            materialTypeId: valueMaterialType?.id
+            materialTypeId: valueMaterialType?.id,
+            stad: stad, 
           },
         ]);
-
+  
       if (dbError) throw dbError;
-
+  
       alert('Afbeelding geüpload en succesvol opgeslagen!');
     } catch (error) {
       console.error('Fout bij het uploaden van afbeelding:', error);
@@ -195,9 +234,11 @@ const [selectedLanguage, setSelectedLanguage] = useState();
       setUploading(false);
     }
   };
+  
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()} >
+      <ScrollView>
       <View style={styles.kikker}>
         <TextInput 
           style={styles.input} 
@@ -213,13 +254,6 @@ const [selectedLanguage, setSelectedLanguage] = useState();
           value={descriptionPlaatsen}
           placeholder="Beschrijving"
         />
-        <TextInput 
-          editable 
-          maxLength={150} 
-          style={styles.input} 
-          placeholder="Locatie" 
-        />
-
         <View style={styles.dropDownStyle}>
           <View style={styles.dropDownContainer}>
             <DropDownSelect
@@ -280,6 +314,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
         <Button title="Plaatsen" onPress={uploadToDatabase} disabled={uploading} />
         {uploading && <Text>Uploading...</Text>}
       </View>
+      </ScrollView>
     </TouchableWithoutFeedback>
   );
 }
@@ -287,7 +322,7 @@ const [selectedLanguage, setSelectedLanguage] = useState();
 const styles = StyleSheet.create({
   kikker: {
     display: 'flex',
-    // flex: 1,
+    flex: 1,
     backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
@@ -320,7 +355,7 @@ const styles = StyleSheet.create({
   dropDownStyle: {
     flexDirection: 'row', // Zorgt ervoor dat de elementen naast elkaar komen
     justifyContent: 'space-between', // Ruimte tussen de dropdowns
-    alignItems: 'center', // Optioneel: om de items verticaal te centreren
+    alignItems: 'flex-start', // Optioneel: om de items verticaal te centreren
     width: '88%',
     marginVertical: 10, // Voeg wat verticale ruimte toe
   },
