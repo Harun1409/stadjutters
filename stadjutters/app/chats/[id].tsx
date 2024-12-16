@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     StyleSheet,
     Text,
@@ -8,27 +8,27 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
+    Alert,
 } from 'react-native';
-import {usePathname} from 'expo-router';
-import {supabase} from '@/lib/supabase';
-import {Session} from '@supabase/supabase-js';
-
+import { usePathname } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 const fetchMessages = async (userId: string, chatPartnerId: string) => {
-    const {data, error} = await supabase
+    const { data, error } = await supabase
         .from('chatmessage')
         .select('*')
         .or(
             `and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`
         )
-        .order('created_at', {ascending: true});
+        .order('created_at', { ascending: true });
 
     if (error) {
         console.error('Error fetching messages:', error);
         return [];
     }
 
-    return data; // Retourneer alle berichten zonder extra filtering
+    return data;
 };
 
 const sendMessageToBackend = async (
@@ -36,14 +36,14 @@ const sendMessageToBackend = async (
     receiverId: string,
     messageContent: string
 ) => {
-    const {data, error} = await supabase
+    const { data, error } = await supabase
         .from('chatmessage')
         .insert([
             {
                 sender_id: senderId,
                 receiver_id: receiverId,
                 message_content: messageContent,
-                is_read: false, // Mark as unread by default
+                is_read: false,
                 created_at: new Date().toISOString(),
             },
         ])
@@ -59,23 +59,19 @@ const sendMessageToBackend = async (
 
 export default function ChatPage() {
     const pathname = usePathname();
-    const receiverId = pathname.split('/').pop(); // Extract receiver ID from the URL
+    const receiverId = pathname.split('/').pop();
     const [session, setSession] = useState<Session | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
-    useEffect(() => {
-        console.log('Messages:', messages); // Bekijk alle berichten in de state
-    }, [messages]);
     const [inputMessage, setInputMessage] = useState<string>('');
     const [loading, setLoading] = useState(true);
 
-    // Fetch the logged-in user's session
     useEffect(() => {
         const fetchSession = async () => {
-            const {data} = await supabase.auth.getSession();
+            const { data } = await supabase.auth.getSession();
             setSession(data.session);
         };
 
-        const {data: listener} = supabase.auth.onAuthStateChange((_event, newSession) => {
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
             setSession(newSession);
         });
 
@@ -86,13 +82,10 @@ export default function ChatPage() {
         };
     }, []);
 
-    // Fetch chat messages
     useEffect(() => {
         const loadMessages = async () => {
             if (session?.user?.id && receiverId) {
                 const fetchedMessages = await fetchMessages(session.user.id, receiverId);
-
-                console.log('Fetched messages:', fetchedMessages); // Log alle berichten
                 setMessages(fetchedMessages);
                 setLoading(false);
             }
@@ -101,7 +94,6 @@ export default function ChatPage() {
         loadMessages();
     }, [session, receiverId]);
 
-    // Chatmessages updaten in realtime
     useEffect(() => {
         const setupRealTime = async () => {
             if (!session?.user?.id || !receiverId) return;
@@ -118,8 +110,6 @@ export default function ChatPage() {
                     },
                     (payload) => {
                         const newMessage = payload.new;
-
-                        // Voeg nieuwe berichten toe aan de huidige lijst
                         setMessages((prevMessages) => [...prevMessages, newMessage]);
                     }
                 )
@@ -144,19 +134,36 @@ export default function ChatPage() {
             created_at: new Date().toISOString(),
         };
 
-        // Voeg het bericht direct toe aan de lokale staat
         setMessages((prev) => [...prev, newMessage]);
 
-        const {data, error} = await supabase.from('chatmessage').insert([newMessage]).select('*').single();
+        const { data, error } = await supabase.from('chatmessage').insert([newMessage]).select('*').single();
 
-        console.log('Inserted Message Response:', data); // Debug: Bekijk de geretourneerde data
         if (error) {
             console.error('Error sending message:', error);
-            // Verwijder lokaal toegevoegd bericht als het invoegen mislukt
             setMessages((prev) => prev.filter((msg) => msg !== newMessage));
         }
 
         setInputMessage('');
+    };
+
+    const handleReport = () => {
+        Alert.alert(
+            'Rapporteren',
+            'Weet u zeker dat u deze gebruiker wilt rapporteren?',
+            [
+                {
+                    text: 'Ja',
+                    onPress: () => console.log('User reported'),
+
+                },
+                {
+                    text: 'Annuleren',
+                    onPress: () => console.log('Report cancelled'),
+                    style: 'cancel',
+                },
+            ],
+            { cancelable: false }
+        );
     };
 
     if (!receiverId) {
@@ -166,7 +173,6 @@ export default function ChatPage() {
             </View>
         );
     }
-
 
     if (loading) {
         return (
@@ -181,11 +187,15 @@ export default function ChatPage() {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
+                    <Text style={styles.reportButtonText}>Report</Text>
+                </TouchableOpacity>
+            </View>
             <FlatList
                 data={messages}
-                // keyExtractor={(item) => item.id.toString()}
                 keyExtractor={(item, index) => (item.id ? item.id.toString() : `temp-${index}`)}
-                renderItem={({item}) => (
+                renderItem={({ item }) => (
                     <View
                         style={[
                             styles.messageBubble,
@@ -199,9 +209,8 @@ export default function ChatPage() {
                     </View>
                 )}
                 style={styles.chatList}
-                contentContainerStyle={{paddingBottom: 10}}
+                contentContainerStyle={{ paddingBottom: 10 }}
             />
-
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.textInput}
@@ -221,6 +230,19 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
+    },
+    headerText: {
+        flex: 1,
+        fontSize: 18,
+        fontWeight: 'bold',
     },
     chatList: {
         flex: 1,
@@ -278,5 +300,16 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    reportButton: {
+        backgroundColor: 'red',
+        padding: 10,
+        borderRadius: 5,
+        alignSelf: 'center',
+
+    },
+    reportButtonText: {
+        color: 'white',
+        fontSize: 12,
     },
 });
