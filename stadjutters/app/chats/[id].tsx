@@ -1,6 +1,7 @@
 import React from 'react';
 import {StyleSheet, Text, View} from 'react-native';
-import {useSearchParams} from "expo-router/build/hooks";
+import { usePathname } from 'expo-router';
+
 
 type ChatParams = {
     id: string;
@@ -8,10 +9,11 @@ type ChatParams = {
 
 
 export default function ChatPage() {
+    const pathname = usePathname();
+    const id = pathname.split('/').pop(); // Extract "id" from the URL
 
-    // Use `unknown` first to bypass TypeScript's strict checks
-    const searchParams = useSearchParams();
-    const { id } = searchParams as unknown as Record<keyof ChatParams, string>;
+
+
 
 
     // Handle missing `id`

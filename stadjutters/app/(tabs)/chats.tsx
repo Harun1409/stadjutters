@@ -60,7 +60,7 @@ export default function ChatsScreen() {
         },
         {
             id: 5,
-            name: 'Alice',
+            name: 'Sjonnie (Masin)',
             message: 'Hey, how are you?',
             seen: true,
             sent: false,
@@ -135,7 +135,7 @@ export default function ChatsScreen() {
 
     const renderChatItem = ({item}: { item: ChatItem }) => (
         <Pressable
-            onPress={() => router.push(`/chats/${item.id.toString()}`)}
+            onPress={() => router.push(`/chats/${item.id}`)}
             // key={chat.id}
             style={[
                 styles.chatPreview,
