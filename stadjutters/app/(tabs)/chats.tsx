@@ -1,206 +1,129 @@
 // /apps/(tabs)/chats.tsx
-import {Image, StyleSheet, Platform, View, Pressable, Text, FlatList} from 'react-native';
-import {ThemedText} from '@/components/ThemedText';
-import {ThemedView} from '@/components/ThemedView';
-import {useNavigation} from '@react-navigation/native'; // Import navigation hook
-import {useSession} from '@/app/SessionContext'; // Needed to get session information (id,email etc)
+import {StyleSheet, View, Pressable, Text, FlatList} from 'react-native';
+import React, { useEffect, useState } from 'react';
+import {useSession} from '@/app/SessionContext';
 import {useRouter} from 'expo-router';
+import { supabase } from '@/lib/supabase';
+
+type ChatItem = {
+    id: number; // Receiver ID used as the chat identifier
+    message_content: string; // Last message in the chat
+    created_at: string; // Timestamp of the last message
+    sender_id: string; // Sender ID
+    receiver_id: string; // Receiver ID
+    is_read: boolean; // Read status of the last message
+    other_user_name: string; // Name of the other user in the chat
+};
 
 export default function ChatsScreen() {
     const router = useRouter();
-    const {session} = useSession();
-    const navigation = useNavigation(); // Initialize navigation
+    const { session } = useSession(); // Get the current user session
+    const [chats, setChats] = useState<ChatItem[]>([]);
+    const [loading, setLoading] = useState<boolean>(true);
 
-    type ChatItem = {
-        id: number;
-        name: string;
-        message: string;
-        seen: boolean;
-        sent: boolean;
-        unreadCount: number;
-        timestamp: string;
-    };
+    // Fetch chat messages from Supabase
+    useEffect(() => {
+        const fetchChats = async () => {
+            if (!session?.user?.id) return;
 
-    const chatPreviews: ChatItem[] = [
-        {
-            id: 1,
-            name: 'Alice',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 2,
-            timestamp: '10:45 AM',
-        },
-        {
-            id: 2,
-            name: 'Bob',
-            message: 'Can we meet tomorrow?',
-            seen: false,
-            sent: true,
-            unreadCount: 0,
-            timestamp: 'Yesterday',
-        },
-        {
-            id: 3,
-            name: 'Charlie',
-            message: 'Thanks for the update!',
-            seen: true,
-            sent: true,
-            unreadCount: 0,
-            timestamp: '2 days ago',
-        },
-        {
-            id: 4,
-            name: 'Harun',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 0,
-            timestamp: 'One week ago',
-        },
-        {
-            id: 5,
-            name: 'Sjonnie (Masin)',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 2,
-            timestamp: 'Two weeks ago',
-        },
-        {
-            id: 6,
-            name: 'Amber',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 0,
-            timestamp: 'Two weeks ago',
-        },
-        {
-            id: 7,
-            name: 'Jim',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 0,
-            timestamp: 'Two weeks ago',
-        },
-        {
-            id: 8,
-            name: 'Thijs',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 0,
-            timestamp: 'Two weeks ago',
-        },
-        {
-            id: 9,
-            name: 'Niels',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 0,
-            timestamp: 'Two weeks ago',
-        },
-        {
-            id: 10,
-            name: 'Ahmed',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 0,
-            timestamp: 'Two weeks ago',
-        },
-        {
-            id: 11,
-            name: 'Masin',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 0,
-            timestamp: 'Two weeks ago',
-        },
-        {
-            id: 12,
-            name: 'Jeroen',
-            message: 'Hey, how are you?',
-            seen: true,
-            sent: false,
-            unreadCount: 0,
-            timestamp: 'Two weeks ago',
-        },
-    ];
+            try {
+                const userId = session.user.id;
 
+                console.log(userId);
 
-    const renderChatItem = ({item}: { item: ChatItem }) => (
+                // Fetch the latest message for each conversation involving the user
+                const { data, error } = await supabase
+                    .rpc('get_latest_chat_messages', { current_user_id: userId });
+
+                if (error) {
+                    console.error('Error fetching chats:', error);
+                    return;
+                } else {
+                    console.log('Fetched chats:', data);
+                }
+
+                console.log('Session:', session); // Verify session exists
+                console.log('Current User ID:', session?.user?.id); // Verify user ID is passed
+                console.log('Fetched chats:', data); // Check if data is being returned
+                if (error) console.error('Error:', error);
+
+                // Map results into a more usable format
+                const formattedChats = data.map((chat: any) => ({
+                    id: chat.sender_id === session?.user?.id ? chat.receiver_id : chat.sender_id, // Chat ID based on the other user
+                    message_content: chat.message_content,
+                    created_at: chat.created_at,
+                    sender_id: chat.sender_id,
+                    receiver_id: chat.receiver_id,
+                    is_read: chat.is_read,
+                    // other_user_name: chat.other_user_name, // Assume this is returned in the RPC
+                    other_user_name: chat.sender_id === session?.user?.id ? chat.receiver_name : chat.sender_name, // Dynamically choose name
+                }));
+
+                setChats(formattedChats);
+            } catch (err) {
+                console.error('Unexpected error:', err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchChats();
+    }, [session]);
+
+    const renderChatItem = ({ item }: { item: ChatItem }) => (
         <Pressable
             onPress={() => router.push(`/chats/${item.id}`)}
-            // key={chat.id}
-            style={[
-                styles.chatPreview,
-                !item.sent && item.unreadCount > 0
-                    ? styles.unreadReceivedMessage
-                    : styles.sentOrReadMessage,
-            ]}
+            style={styles.chatPreview}
         >
             <View style={styles.textContainer}>
-                <Text style={styles.name}>{item.name}</Text>
-                <Text style={styles.message}>{item.message}</Text>
+                <Text style={styles.name}>{item.other_user_name}</Text>
+                <Text style={styles.message}>{item.message_content}</Text>
             </View>
             <View style={styles.infoContainer}>
-                <Text style={styles.timestamp}>{item.timestamp}</Text>
-                {item.sent && <Text style={styles.seen}>{item.seen ? '✔️✔️' : '✔️'}</Text>}
-                {!item.sent && item.unreadCount > 0 && (
+                <Text style={styles.timestamp}>
+                    {new Date(item.created_at).toLocaleTimeString()}
+                </Text>
+                {!item.is_read && (
                     <View style={styles.notificationBlip}>
-                        <Text style={styles.notificationText}>{item.unreadCount}</Text>
+                        <Text style={styles.notificationText}>●</Text>
                     </View>
                 )}
             </View>
         </Pressable>
     );
 
+    if (loading) {
+        return (
+            <View style={styles.container}>
+                <Text>Loading chats...</Text>
+            </View>
+        );
+    }
+
     return (
-        <View>
-            {session && session.user ? (
-
-                <FlatList
-                    data={chatPreviews}
-                    renderItem={renderChatItem}
-                    keyExtractor={(item) => item.id.toString()}
-
-                />
-
-
-            ) : (
-                <ThemedView style={styles.kikker}>
-                    <ThemedText>Log in om je chats te bekijken!</ThemedText>
-                </ThemedView>
-            )}
+        <View style={styles.container}>
+            <FlatList
+                data={chats}
+                renderItem={renderChatItem}
+                keyExtractor={(item) => item.id.toString()}
+            />
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-
-    kikker: {
-        display: 'flex',
+    container: {
         flex: 1,
         backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center'
+        padding: 16,
     },
     chatPreview: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         alignItems: 'center',
-        paddingHorizontal: 20,
         paddingVertical: 12,
         borderBottomWidth: 1,
         borderBottomColor: '#ddd',
-
-        backgroundColor: 'transparent', // Ensure no conflicting background color
-
     },
     textContainer: {
         flex: 1,
@@ -213,7 +136,6 @@ const styles = StyleSheet.create({
         fontSize: 14,
         color: '#555',
     },
-
     infoContainer: {
         alignItems: 'flex-end',
         marginLeft: 12,
@@ -222,28 +144,17 @@ const styles = StyleSheet.create({
         fontSize: 12,
         color: '#999',
     },
-    seen: {
-        fontSize: 14,
-        marginTop: 4,
-    },
-    sentOrReadMessage: {
-        backgroundColor: '#F2F2F2',
-    },
-    unreadReceivedMessage: {
-        backgroundColor: '#FCFCFC',
-    },
     notificationBlip: {
         backgroundColor: 'red',
         borderRadius: 12,
-        width: 24,
-        height: 24,
+        width: 12,
+        height: 12,
         justifyContent: 'center',
         alignItems: 'center',
-        marginTop: 4,
     },
     notificationText: {
         color: 'white',
-        fontSize: 12,
+        fontSize: 10,
         fontWeight: 'bold',
     },
 });
