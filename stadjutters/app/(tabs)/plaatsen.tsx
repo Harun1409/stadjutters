@@ -1,4 +1,4 @@
-import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList, ScrollView, LogBox } from 'react-native';
+import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList, ScrollView, LogBox, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker'; 
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../SessionContext'; // Assuming this provides session info (user ID)
@@ -29,6 +29,9 @@ export default function HomeScreen() {
   const [openMaterialType, setOpenMaterialType] = useState(false);
   const [valueMaterialType, setValueMaterialType] = useState<any>(null);
   const [materialTypes, setmaterialTypes] = useState<MaterialType[]>([]); // Typen van de materialTypes array als MaterialType[]
+  const [selected, setSelected] = useState('Huisvondst'); // State voor de geselecteerde segmentoptie (First of Second)
+  
+  
 
 //--------------------
 const [selectedLanguage, setSelectedLanguage] = useState();
@@ -236,6 +239,7 @@ const getStadFromProfile = async () => {
       setUploading(false);
     }
   };
+
   
 
   return (
@@ -303,6 +307,43 @@ const getStadFromProfile = async () => {
             />
           </View>
         </View>
+        <View style={styles.segmentedControlWrapper}>
+          <TouchableOpacity
+            style={[
+              styles.segmentButton,
+              selected === 'Huisvondst' && styles.activeSegmentButton,
+            ]}
+            onPress={() => setSelected('Huisvondst')}
+          >
+            <Text
+              style={[
+                styles.segmentButtonText,
+                selected === 'Huisvondst' && styles.activeSegmentButtonText,
+              ]}
+            >
+              Huisvondst
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[
+              styles.segmentButton,
+              selected === 'Straatvondst' && styles.activeSegmentButton,
+            ]}
+            onPress={() => setSelected('Straatvondst')}
+          >
+            <Text
+              style={[
+                styles.segmentButtonText,
+                selected === 'Straatvondst' && styles.activeSegmentButtonText,
+              ]}
+            >
+              Straatvondst
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <View style={styles.segmentedControlContent}>
+        </View>
         <Button title="Kies een afbeelding uit de Galerij" onPress={pickImage} />
         <Button title="Maak een foto" onPress={takePhoto} />
 
@@ -312,7 +353,6 @@ const getStadFromProfile = async () => {
             <Image source={{ uri: image }} style={styles.image} />
           </View>
         )}
-
         <Button title="Plaatsen" onPress={uploadToDatabase} disabled={uploading} />
         {uploading && <Text>Uploading...</Text>}
       </View>
@@ -364,5 +404,38 @@ const styles = StyleSheet.create({
   dropDownContainer: {
     flex: 1, // Zorgt ervoor dat beide dropdowns evenveel ruimte innemen
     marginHorizontal: 5, // Voeg wat ruimte tussen de dropdowns toe
+  },
+  segmentedControlWrapper: {
+    width: '85%',
+    flexDirection: 'row',
+    borderWidth: 1,
+    borderColor: 'blue',
+    borderRadius: 25,
+    overflow: 'hidden',
+    backgroundColor: 'white',
+  },
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  activeSegmentButton: {
+    backgroundColor: 'blue',
+  },
+  segmentButtonText: {
+    color: 'blue',
+    fontWeight: '600',
+  },
+  activeSegmentButtonText: {
+    color: 'white',
+  },
+  segmentedControlContent: {
+    marginTop: 20,
+    padding: 10,
+  },
+  segmentedControlContentText: {
+    fontSize: 16,
+    fontWeight: '500',
   },
 });
