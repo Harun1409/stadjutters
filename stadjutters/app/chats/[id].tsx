@@ -10,10 +10,12 @@ import {
     Platform,
     Modal,
     Alert,
+    Image,
 } from 'react-native';
 import { usePathname } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { Session } from '@supabase/supabase-js';
+import uuid from "expo-modules-core/src/uuid";
 
 const fetchMessages = async (userId: string, chatPartnerId: string) => {
     const { data, error } = await supabase
@@ -58,6 +60,23 @@ const sendMessageToBackend = async (
     return data;
 };
 
+const insertReportedMessage = async (reportsUser: string, reportReason: string) => {
+    const { data, error } = await supabase
+        .from('reportedMessages')
+        .insert([
+            {
+                reports_user: reportsUser,
+                report_reason: reportReason,
+                created_at: new Date().toISOString(),
+            },
+        ]);
+
+    if (error) {
+        console.error('Error inserting reported message:', error);
+    } else {
+        console.log('Inserted reported message:', data);
+    }
+};
 
 export default function ChatPage() {
     const pathname = usePathname();
@@ -92,7 +111,6 @@ export default function ChatPage() {
                 const fetchedMessages = await fetchMessages(session.user.id, receiverId);
                 setMessages(fetchedMessages);
 
-                // Mark all received messages as read
                 await markMessagesAsRead(receiverId, session.user.id);
 
                 setLoading(false);
@@ -191,11 +209,16 @@ export default function ChatPage() {
         setModalVisible(true);
     };
 
-    const handleReportSubmit = () => {
-        console.log('Report reason:', reportReason);
+    const handleReportSubmit = async () => {
+        if (!reportReason.trim() || !session?.user?.id) {
+            Alert.alert('Error', 'Please provide a report reason.');
+            return;
+        }
+
+        await insertReportedMessage(session.user.id, reportReason);
         setModalVisible(false);
         setReportReason('');
-        Alert.alert('Success', 'Gebruiker is met success gerapporteerd');
+        Alert.alert('Success', 'User has been successfully reported.');
     };
 
     if (!receiverId) {
@@ -221,7 +244,10 @@ export default function ChatPage() {
         >
             <View style={styles.header}>
                 <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
-                    <Text style={styles.reportButtonText}>Report</Text>
+                    <Image
+                        source={require('C:\\Users\\Gebruiker\\WebstormProjects\\stadjutters\\stadjutters\\assets\\images\\report-icon.jpg')}
+                        style={styles.reportIcon}
+                    />
                 </TouchableOpacity>
             </View>
             <FlatList
@@ -366,14 +392,13 @@ const styles = StyleSheet.create({
         fontWeight: 'bold',
     },
     reportButton: {
-        backgroundColor: 'red',
         padding: 10,
         borderRadius: 5,
         alignSelf: 'center',
     },
-    reportButtonText: {
-        color: 'white',
-        fontSize: 12,
+    reportIcon: {
+        width: 24,
+        height: 24,
     },
     modalView: {
         margin: 20,
