@@ -8,6 +8,7 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
+    Modal,
     Alert,
 } from 'react-native';
 import { usePathname } from 'expo-router';
@@ -64,6 +65,8 @@ export default function ChatPage() {
     const [messages, setMessages] = useState<any[]>([]);
     const [inputMessage, setInputMessage] = useState<string>('');
     const [loading, setLoading] = useState(true);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [reportReason, setReportReason] = useState('');
 
     useEffect(() => {
         const fetchSession = async () => {
@@ -147,23 +150,14 @@ export default function ChatPage() {
     };
 
     const handleReport = () => {
-        Alert.alert(
-            'Rapporteren',
-            'Weet u zeker dat u deze gebruiker wilt rapporteren?',
-            [
-                {
-                    text: 'Ja',
-                    onPress: () => console.log('User reported'),
+        setModalVisible(true);
+    };
 
-                },
-                {
-                    text: 'Annuleren',
-                    onPress: () => console.log('Report cancelled'),
-                    style: 'cancel',
-                },
-            ],
-            { cancelable: false }
-        );
+    const handleReportSubmit = () => {
+        console.log('Report reason:', reportReason);
+        setModalVisible(false);
+        setReportReason('');
+        Alert.alert('Success', 'Gebruiker is met success gerapporteerd');
     };
 
     if (!receiverId) {
@@ -222,6 +216,38 @@ export default function ChatPage() {
                     <Text style={styles.sendButtonText}>Send</Text>
                 </TouchableOpacity>
             </View>
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => {
+                    setModalVisible(!modalVisible);
+                }}
+            >
+                <View style={styles.modalView}>
+                    <Text style={styles.modalText}>Report Reason</Text>
+                    <TextInput
+                        style={styles.modalTextInput}
+                        value={reportReason}
+                        onChangeText={setReportReason}
+                        placeholder="Wat is de reden van je report?"
+                    />
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity
+                            style={[styles.button, styles.buttonClose]}
+                            onPress={() => setModalVisible(!modalVisible)}
+                        >
+                            <Text style={styles.textStyle}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.button, styles.buttonSubmit]}
+                            onPress={handleReportSubmit}
+                        >
+                            <Text style={styles.textStyle}>Submit</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </KeyboardAvoidingView>
     );
 }
@@ -306,10 +332,60 @@ const styles = StyleSheet.create({
         padding: 10,
         borderRadius: 5,
         alignSelf: 'center',
-
     },
     reportButtonText: {
         color: 'white',
         fontSize: 12,
+    },
+    modalView: {
+        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    modalText: {
+        marginBottom: 15,
+        textAlign: 'center',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    modalTextInput: {
+        width: '100%',
+        height: 40,
+        borderColor: 'gray',
+        borderWidth: 1,
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        marginBottom: 15,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    button: {
+        borderRadius: 20,
+        padding: 10,
+        elevation: 2,
+    },
+    buttonClose: {
+        backgroundColor: '#f44336',
+    },
+    buttonSubmit: {
+        backgroundColor: '#2196F3',
+    },
+    textStyle: {
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
 });
