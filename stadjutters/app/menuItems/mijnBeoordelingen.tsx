@@ -1,90 +1,93 @@
-import {
-  Image,
-  StyleSheet,
-  Platform,
-  View,
-  Text,
-  TextInput,
-  Button,
-  FlatList,
-  ActivityIndicator,
-} from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-import { useState, useEffect } from 'react';
-import { Link } from 'expo-router';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, Text, FlatList, ActivityIndicator, Button,} from 'react-native';
+import { Picker } from '@react-native-picker/picker'; // Installatie nodig: npm install @react-native-picker/picker
 import { supabase } from '../../lib/supabase';
-
-
-
-export default function HomeScreen({}) {
-  const [text, setText] = useState('');
-  const [reviews, setReviews] = useState<Review[]>([]); // TypeScript weet nu dat dit een array van Review-objecten is
-  const [loading, setLoading] = useState(true); // Laadstatus
-  // Definieer een TypeScript-type voor beoordelingen
+import { ThemedText } from '@/components/ThemedText';
+import { Link } from 'expo-router';
 
 type Review = {
-  id: number; // Gebruik het type dat overeenkomt met je database-id
-  username: string; // Username van de gebruiker
+  id: number;
   rating: number;
   description: string;
-  created_at: string;
+  username: string;
 };
 
+export default function HomeScreen() {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState<'received' | 'given'>('received'); // Filtertype: ontvangen of gegeven
+
   useEffect(() => {
-    const fetchReviews = async () => {
+    const fetchReviews = async () => {  
+      setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from('UserReview') // Tabelnaam in Supabase
-          .select(`
-            id,
-            rating,
-            description,
-            created_at,
-            profiles(username) // Haal username op via de relatie met de profiles-tabel
-          `)
-          .order('created_at', { ascending: false }); // Sorteer beoordelingen op nieuwste eerst
+        // Haal huidige gebruiker op via Supabase Auth
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          console.error('Gebruiker niet ingelogd:', userError);
+          alert('Je moet ingelogd zijn om beoordelingen te bekijken.');
+          return;
+        }
+
+        // Bepaal filtertype: ontvangen of gegeven beoordelingen
+        let query = supabase.from('UserReview').select('*').order('created_at', { ascending: false });
+
+        if (filterType === 'received') {
+          query = query.eq('reviewed_username', user.user_metadata.username); // Beoordelingen over jou
+        } else if (filterType === 'given') {
+          query = query.eq('reviewer_username', user.user_metadata.username); // Beoordelingen die jij geplaatst hebt
+        }
+
+        const { data, error } = await query;
 
         if (error) {
-          console.error('Fout bij het ophalen van beoordelingen:', error.message);
+          console.error('Fout bij ophalen beoordelingen:', error.message);
           alert('Er ging iets mis bij het ophalen van de beoordelingen.');
-        } else {
-          // Map de data zodat de username op het hoogste niveau komt
-          const mappedReviews = data.map((item) => ({
-            id: item.id,
-            rating: item.rating,
-            description: item.description,
-            created_at: item.created_at,
-            username: item.profiles?.username || 'Onbekend', // Gebruik 'Onbekend' als username niet beschikbaar is
-          }));
-          setReviews(mappedReviews); // Zet de aangepaste beoordelingen in de state
+          setReviews([]);
+          return;
         }
+
+        const mappedReviews = data.map((item) => ({
+          id: item.id,
+          rating: item.rating,
+          description: item.description,
+          username:
+            filterType === 'received'
+              ? item.reviewer_username
+              : item.reviewed_username, // Toon andere partij afhankelijk van filter
+        }));
+        setReviews(mappedReviews);
       } catch (err) {
         console.error('Onverwachte fout:', err);
-        alert('Onverwachte fout opgetreden.');
+        alert('Er ging iets mis bij het ophalen van de beoordelingen.');
+        setReviews([]);
       } finally {
-        setLoading(false); // Zet de laadstatus op false
+        setLoading(false);
       }
     };
 
     fetchReviews();
-  }, []); // Lege afhankelijkhedenarray zorgt ervoor dat dit maar één keer wordt uitgevoerd
+  }, [filterType]); // Voer opnieuw uit bij wijziging van filtertype
 
   return (
     <View style={styles.container}>
-      <ThemedText>Mijn beoordelingen</ThemedText>
+      <ThemedText style={styles.header}>Beoordelingen</ThemedText>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Type hier..."
-        onChangeText={(value) => setText(value)}
-      />
+      {/* Dropdown Filter */}
+      <Picker
+        selectedValue={filterType}
+        onValueChange={(itemValue) => setFilterType(itemValue)}
+        style={styles.picker}
+      >
+        <Picker.Item label="Beoordelingen over jou" value="received" />
+        <Picker.Item label="Beoordelingen die jij hebt geplaatst" value="given" />
+      </Picker>
 
-      <Link href="/beoordelingPlaatsen" style={styles.output}>
-        Beoordeling plaatsen
-      </Link>
-
-      {/* Beoordelingenlijst */}
+      {/* Beoordelingen Lijst */}
       {loading ? (
         <ActivityIndicator size="large" color="#6200ee" style={styles.loader} />
       ) : (
@@ -96,52 +99,39 @@ type Review = {
               <Text style={styles.username}>{item.username}</Text>
               <Text style={styles.rating}>⭐ {item.rating}</Text>
               <Text style={styles.description}>{item.description}</Text>
-              <Text style={styles.date}>{new Date(item.created_at).toLocaleDateString()}</Text>
             </View>
           )}
-          ListEmptyComponent={<Text style={styles.noReviews}>Geen beoordelingen gevonden.</Text>}
+          ListEmptyComponent={
+            <Text style={styles.noReviews}>
+              Geen beoordelingen gevonden voor deze categorie.
+            </Text>
+          }
         />
       )}
+
+      {/* Link om beoordeling te plaatsen */}
+      <Link href="/beoordelingPlaatsen" style={styles.link}>
+        <Text style={styles.link}>Beoordeling plaatsen</Text>
+      </Link>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  kikker: {
-    display: 'flex',
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    fontSize: 20,
-    color: 'black',
-  },
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
     padding: 20,
+    backgroundColor: '#fff',
   },
-  label: {
-    fontSize: 18,
-    marginBottom: 10,
+  header: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
   },
-  input: {
-    height: 50,
-    borderColor: '#6200ee',
-    borderWidth: 2,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    marginBottom: 12,
+  picker: {
     width: '100%',
-  },
-  output: {
-    fontSize: 16,
-    color: '#6200ee',
-    marginTop: 10,
+    marginBottom: 20,
   },
   loader: {
     marginTop: 20,
@@ -155,31 +145,31 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 5,
-    width: '100%',
   },
   username: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 5,
   },
   rating: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  description: {
-    marginTop: 5,
     fontSize: 16,
     color: '#333',
   },
-  date: {
-    marginTop: 10,
-    fontSize: 12,
-    color: '#888',
+  description: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 5,
   },
   noReviews: {
     fontSize: 16,
     color: '#888',
     marginTop: 20,
+    textAlign: 'center',
+  },
+  link: {
+    fontSize: 16,
+    color: '#6200ee',
+    marginTop: 20,
+    textAlign: 'center',
   },
 });
-
