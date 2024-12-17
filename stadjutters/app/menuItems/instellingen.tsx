@@ -3,7 +3,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 
 
-export default function HomeScreen() {
+export default function SettingsScreen() {
   return (
     <View style={styles.kikker}>
       <ThemedText>Instellingen</ThemedText>
