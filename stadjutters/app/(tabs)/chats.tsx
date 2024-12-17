@@ -21,45 +21,109 @@ export default function ChatsScreen() {
     const [chats, setChats] = useState<ChatItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
 
+    // Realtime updaten
+    useEffect(() => {
+        const userId = session?.user?.id;
+        if (!userId) return;
+
+        const subscription = supabase
+            .channel('realtime-chats')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*', // Luister naar INSERT/UPDATE/DELETE
+                    schema: 'public',
+                    table: 'chatmessage',
+                    filter: `or(sender_id.eq.${userId},receiver_id.eq.${userId})`,
+                },
+                (payload) => {
+                    console.log('Realtime update:', payload);
+
+                    if (payload.eventType === 'INSERT') {
+                        const newMessage = payload.new;
+                        const chatId =
+                            newMessage.sender_id === userId
+                                ? newMessage.receiver_id
+                                : newMessage.sender_id;
+
+                        setChats((prevChats) => {
+                            // Update bestaande chats of voeg nieuwe toe
+                            const existingChatIndex = prevChats.findIndex(
+                                (chat) => chat.id === chatId
+                            );
+
+                            if (existingChatIndex > -1) {
+                                const updatedChats = [...prevChats];
+                                updatedChats[existingChatIndex] = {
+                                    ...updatedChats[existingChatIndex],
+                                    message_content: newMessage.message_content,
+                                    created_at: newMessage.created_at,
+                                    is_read: newMessage.is_read,
+                                };
+                                return updatedChats.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                            } else {
+                                // Nieuwe chat toevoegen
+                                return [
+                                    {
+                                        id: chatId,
+                                        message_content: newMessage.message_content,
+                                        created_at: newMessage.created_at,
+                                        sender_id: newMessage.sender_id,
+                                        receiver_id: newMessage.receiver_id,
+                                        is_read: newMessage.is_read,
+                                        other_user_name:
+                                            newMessage.sender_id === userId
+                                                ? newMessage.receiver_name
+                                                : newMessage.sender_name,
+                                    },
+                                    ...prevChats,
+                                ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+                            }
+                        });
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [session]);
+
+
     // Fetch chat messages from Supabase
     useEffect(() => {
         const fetchChats = async () => {
             if (!session?.user?.id) return;
 
             try {
-                const userId = session.user.id;
-
-                console.log(userId);
-
-                // Fetch the latest message for each conversation involving the user
                 const { data, error } = await supabase
-                    .rpc('get_latest_chat_messages', { current_user_id: userId });
+                    .rpc('get_latest_chat_messages', { current_user_id: session.user.id });
 
                 if (error) {
                     console.error('Error fetching chats:', error);
                     return;
-                } else {
-                    console.log('Fetched chats:', data);
                 }
 
-                console.log('Session:', session); // Verify session exists
-                console.log('Current User ID:', session?.user?.id); // Verify user ID is passed
-                console.log('Fetched chats:', data); // Check if data is being returned
-                if (error) console.error('Error:', error);
+                console.log('Raw Supabase Data:', data); // Log alle data van Supabase
 
-                // Map results into a more usable format
                 const formattedChats = data.map((chat: any) => ({
-                    id: chat.sender_id === session?.user?.id ? chat.receiver_id : chat.sender_id, // Chat ID based on the other user
+                    id: chat.sender_id === session?.user?.id ? chat.receiver_id : chat.sender_id,
                     message_content: chat.message_content,
                     created_at: chat.created_at,
                     sender_id: chat.sender_id,
                     receiver_id: chat.receiver_id,
                     is_read: chat.is_read,
-                    // other_user_name: chat.other_user_name, // Assume this is returned in the RPC
-                    other_user_name: chat.sender_id === session?.user?.id ? chat.receiver_name : chat.sender_name, // Dynamically choose name
+                    other_user_name:
+                        chat.other_user_name
                 }));
 
-                setChats(formattedChats);
+                console.log('Formatted Chats:', formattedChats); // Controleer of namen worden gemapt
+                setChats(
+                    formattedChats.sort(
+                        (a: { created_at: string | number | Date; }, b: { created_at: string | number | Date; }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                    )
+                );
             } catch (err) {
                 console.error('Unexpected error:', err);
             } finally {
@@ -70,6 +134,28 @@ export default function ChatsScreen() {
         fetchChats();
     }, [session]);
 
+    // const renderChatItem = ({ item }: { item: ChatItem }) => (
+    //     <Pressable
+    //         onPress={() => router.push(`/chats/${item.id}`)}
+    //         style={styles.chatPreview}
+    //     >
+    //         <View style={styles.textContainer}>
+    //             <Text style={styles.name}>{item.other_user_name}</Text>
+    //             <Text style={styles.message}>{item.message_content}</Text>
+    //         </View>
+    //         <View style={styles.infoContainer}>
+    //             <Text style={styles.timestamp}>
+    //                 {new Date(item.created_at).toLocaleTimeString()}
+    //             </Text>
+    //             {!item.is_read && (
+    //                 <View style={styles.notificationBlip}>
+    //                     <Text style={styles.notificationText}>●</Text>
+    //                 </View>
+    //             )}
+    //         </View>
+    //     </Pressable>
+    // );
+
     const renderChatItem = ({ item }: { item: ChatItem }) => (
         <Pressable
             onPress={() => router.push(`/chats/${item.id}`)}
@@ -77,7 +163,9 @@ export default function ChatsScreen() {
         >
             <View style={styles.textContainer}>
                 <Text style={styles.name}>{item.other_user_name}</Text>
-                <Text style={styles.message}>{item.message_content}</Text>
+                <Text style={styles.message} numberOfLines={1} ellipsizeMode="tail">
+                    {item.message_content}
+                </Text>
             </View>
             <View style={styles.infoContainer}>
                 <Text style={styles.timestamp}>
