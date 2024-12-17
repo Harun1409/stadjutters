@@ -274,7 +274,7 @@ const getStadFromProfile = async () => {
                 setOpenCategory(false); // Close the dropdown
               }}
               dropDownContainerStyle={{
-                maxHeight: 200,
+                maxHeight: 140,
                 minWidth: 100,
                 borderWidth: 0.5,
                 borderColor: 'lightgray',
@@ -297,7 +297,7 @@ const getStadFromProfile = async () => {
                 setOpenMaterialType(false); // Sluit de dropdown
               }}
               dropDownContainerStyle={{
-                maxHeight: 200,
+                maxHeight: 140,
                 minWidth: 100,
                 borderWidth: 0.5,
                 borderColor: 'lightgray',
@@ -342,8 +342,6 @@ const getStadFromProfile = async () => {
               Straatvondst
             </Text>
           </TouchableOpacity>
-        </View>
-        <View style={styles.segmentedControlContent}>
         </View>
         <View style={styles.dropDownStyle}>
           <View style={styles.dropDownContainer}>
@@ -426,7 +424,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderWidth: 1,
     borderColor: '#3498db',
-    borderRadius: 25,
+    borderRadius: 5,
     overflow: 'hidden',
     backgroundColor: 'white',
   },
