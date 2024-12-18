@@ -154,7 +154,7 @@ export default function ChatsScreen() {
                 {/* Cirkel voor notificaties*/}
                 {!item.is_read && (
                     <View style={styles.notificationBlip}>
-                        <Text style={styles.notificationText}>  {item.unread_count || ''}</Text>
+                        <Text style={styles.notificationText}></Text>
                     </View>
                 )}
             </View>
