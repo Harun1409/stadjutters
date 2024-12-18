@@ -221,6 +221,20 @@ export default function ChatPage() {
     };
 
     const handleReportSubmit = async () => {
+        try {
+            // Haal de ingelogde gebruiker-ID op via Supabase auth
+            const {
+                data: { user },
+                error: userError,
+            } = await supabase.auth.getUser();
+
+            if (userError || !user) {
+                console.error('Gebruiker niet ingelogd:', userError);
+                alert('Je moet ingelogd zijn om een beoordeling te plaatsen.');
+                return;
+            }
+
+
         if (!reportReason.trim() || !session?.user?.id) {
             Alert.alert('Error', 'Please provide a report reason.');
             return;
@@ -230,7 +244,9 @@ export default function ChatPage() {
         setModalVisible(false);
         setReportReason('');
         Alert.alert('Success', 'User has been successfully reported.');
-    };
+    } catch (error){
+        console.error('Error reporting user:', error);}
+    }
 
     if (!receiverId) {
         return (
