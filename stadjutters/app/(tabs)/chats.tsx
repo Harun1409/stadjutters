@@ -134,27 +134,7 @@ export default function ChatsScreen() {
         fetchChats();
     }, [session]);
 
-    // const renderChatItem = ({ item }: { item: ChatItem }) => (
-    //     <Pressable
-    //         onPress={() => router.push(`/chats/${item.id}`)}
-    //         style={styles.chatPreview}
-    //     >
-    //         <View style={styles.textContainer}>
-    //             <Text style={styles.name}>{item.other_user_name}</Text>
-    //             <Text style={styles.message}>{item.message_content}</Text>
-    //         </View>
-    //         <View style={styles.infoContainer}>
-    //             <Text style={styles.timestamp}>
-    //                 {new Date(item.created_at).toLocaleTimeString()}
-    //             </Text>
-    //             {!item.is_read && (
-    //                 <View style={styles.notificationBlip}>
-    //                     <Text style={styles.notificationText}>●</Text>
-    //                 </View>
-    //             )}
-    //         </View>
-    //     </Pressable>
-    // );
+
 
     const renderChatItem = ({ item }: { item: ChatItem }) => (
         <Pressable

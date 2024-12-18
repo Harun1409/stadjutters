@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     StyleSheet,
     Text,
@@ -8,27 +8,30 @@ import {
     TouchableOpacity,
     KeyboardAvoidingView,
     Platform,
+    Modal,
+    Alert,
+    Image,
 } from 'react-native';
-import {usePathname} from 'expo-router';
-import {supabase} from '@/lib/supabase';
-import {Session} from '@supabase/supabase-js';
-
+import { usePathname } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
+import uuid from "expo-modules-core/src/uuid";
 
 const fetchMessages = async (userId: string, chatPartnerId: string) => {
-    const {data, error} = await supabase
+    const { data, error } = await supabase
         .from('chatmessage')
         .select('*')
         .or(
             `and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`
         )
-        .order('created_at', {ascending: true});
+        .order('created_at', { ascending: true });
 
     if (error) {
         console.error('Error fetching messages:', error);
         return [];
     }
 
-    return data; // Retourneer alle berichten zonder extra filtering
+    return data;
 };
 
 const sendMessageToBackend = async (
@@ -36,14 +39,14 @@ const sendMessageToBackend = async (
     receiverId: string,
     messageContent: string
 ) => {
-    const {data, error} = await supabase
+    const { data, error } = await supabase
         .from('chatmessage')
         .insert([
             {
                 sender_id: senderId,
                 receiver_id: receiverId,
                 message_content: messageContent,
-                is_read: false, // Mark as unread by default
+                is_read: false,
                 created_at: new Date().toISOString(),
             },
         ])
@@ -57,26 +60,41 @@ const sendMessageToBackend = async (
     return data;
 };
 
+const insertReportedMessage = async (reportsUser: string, reportReason: string) => {
+    const { data, error } = await supabase
+        .from('reportedMessages')
+        .insert([
+            {
+                reports_user: reportsUser,
+                report_reason: reportReason,
+                created_at: new Date().toISOString(),
+            },
+        ]);
+
+    if (error) {
+        console.error('Error inserting reported message:', error);
+    } else {
+        console.log('Inserted reported message:', data);
+    }
+};
 
 export default function ChatPage() {
     const pathname = usePathname();
-    const receiverId = pathname.split('/').pop(); // Extract receiver ID from the URL
+    const receiverId = pathname.split('/').pop();
     const [session, setSession] = useState<Session | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
-    useEffect(() => {
-        console.log('Messages:', messages); // Bekijk alle berichten in de state
-    }, [messages]);
     const [inputMessage, setInputMessage] = useState<string>('');
     const [loading, setLoading] = useState(true);
+    const [modalVisible, setModalVisible] = useState(false);
+    const [reportReason, setReportReason] = useState('');
 
-    // Fetch the logged-in user's session
     useEffect(() => {
         const fetchSession = async () => {
-            const {data} = await supabase.auth.getSession();
+            const { data } = await supabase.auth.getSession();
             setSession(data.session);
         };
 
-        const {data: listener} = supabase.auth.onAuthStateChange((_event, newSession) => {
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
             setSession(newSession);
         });
 
@@ -91,11 +109,8 @@ export default function ChatPage() {
         const loadMessages = async () => {
             if (session?.user?.id && receiverId) {
                 const fetchedMessages = await fetchMessages(session.user.id, receiverId);
-
-                console.log('Fetched messages:', fetchedMessages); // Log alle berichten
                 setMessages(fetchedMessages);
 
-                // Mark all received messages as read
                 await markMessagesAsRead(receiverId, session.user.id);
 
                 setLoading(false);
@@ -134,6 +149,8 @@ export default function ChatPage() {
                         filter: `or(sender_id.eq.${receiverId},receiver_id.eq.${receiverId})`,
                     },
                     (payload) => {
+                        const newMessage = payload.new;
+                        setMessages((prevMessages) => [...prevMessages, newMessage]);
                         console.log('Realtime update:', payload);
 
                         if (payload.eventType === 'UPDATE') {
@@ -176,19 +193,32 @@ export default function ChatPage() {
             created_at: new Date().toISOString(),
         };
 
-        // Voeg het bericht direct toe aan de lokale staat
         setMessages((prev) => [...prev, newMessage]);
 
-        const {data, error} = await supabase.from('chatmessage').insert([newMessage]).select('*').single();
+        const { data, error } = await supabase.from('chatmessage').insert([newMessage]).select('*').single();
 
-        console.log('Inserted Message Response:', data); // Debug: Bekijk de geretourneerde data
         if (error) {
             console.error('Error sending message:', error);
-            // Verwijder lokaal toegevoegd bericht als het invoegen mislukt
             setMessages((prev) => prev.filter((msg) => msg !== newMessage));
         }
 
         setInputMessage('');
+    };
+
+    const handleReport = () => {
+        setModalVisible(true);
+    };
+
+    const handleReportSubmit = async () => {
+        if (!reportReason.trim() || !session?.user?.id) {
+            Alert.alert('Error', 'Please provide a report reason.');
+            return;
+        }
+
+        await insertReportedMessage(session.user.id, reportReason);
+        setModalVisible(false);
+        setReportReason('');
+        Alert.alert('Success', 'User has been successfully reported.');
     };
 
     if (!receiverId) {
@@ -198,7 +228,6 @@ export default function ChatPage() {
             </View>
         );
     }
-
 
     if (loading) {
         return (
@@ -213,11 +242,18 @@ export default function ChatPage() {
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
+            <View style={styles.header}>
+                <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
+                    <Image
+                        source={require('C:\\Users\\Gebruiker\\WebstormProjects\\stadjutters\\stadjutters\\assets\\images\\report-icon.jpg')}
+                        style={styles.reportIcon}
+                    />
+                </TouchableOpacity>
+            </View>
             <FlatList
                 data={messages}
-                // keyExtractor={(item) => item.id.toString()}
                 keyExtractor={(item, index) => (item.id ? item.id.toString() : `temp-${index}`)}
-                renderItem={({item}) => (
+                renderItem={({ item }) => (
                     <View
                         style={[
                             styles.messageBubble,
@@ -231,9 +267,8 @@ export default function ChatPage() {
                     </View>
                 )}
                 style={styles.chatList}
-                contentContainerStyle={{paddingBottom: 10}}
+                contentContainerStyle={{ paddingBottom: 10 }}
             />
-
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.textInput}
@@ -245,6 +280,38 @@ export default function ChatPage() {
                     <Text style={styles.sendButtonText}>Send</Text>
                 </TouchableOpacity>
             </View>
+            <Modal
+                animationType="slide"
+                transparent={true}
+                visible={modalVisible}
+                onRequestClose={() => {
+                    setModalVisible(!modalVisible);
+                }}
+            >
+                <View style={styles.modalView}>
+                    <Text style={styles.modalText}>Report Reason</Text>
+                    <TextInput
+                        style={styles.modalTextInput}
+                        value={reportReason}
+                        onChangeText={setReportReason}
+                        placeholder="Wat is de reden van je report?"
+                    />
+                    <View style={styles.modalButtons}>
+                        <TouchableOpacity
+                            style={[styles.button, styles.buttonClose]}
+                            onPress={() => setModalVisible(!modalVisible)}
+                        >
+                            <Text style={styles.textStyle}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.button, styles.buttonSubmit]}
+                            onPress={handleReportSubmit}
+                        >
+                            <Text style={styles.textStyle}>Submit</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </KeyboardAvoidingView>
     );
 }
@@ -253,6 +320,19 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    header: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: '#ddd',
+    },
+    headerText: {
+        flex: 1,
+        fontSize: 18,
+        fontWeight: 'bold',
     },
     chatList: {
         flex: 1,
@@ -310,5 +390,65 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    reportButton: {
+        padding: 10,
+        borderRadius: 5,
+        alignSelf: 'center',
+    },
+    reportIcon: {
+        width: 24,
+        height: 24,
+    },
+    modalView: {
+        margin: 20,
+        backgroundColor: 'white',
+        borderRadius: 20,
+        padding: 35,
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    modalText: {
+        marginBottom: 15,
+        textAlign: 'center',
+        fontSize: 18,
+        fontWeight: 'bold',
+    },
+    modalTextInput: {
+        width: '100%',
+        height: 40,
+        borderColor: 'gray',
+        borderWidth: 1,
+        borderRadius: 5,
+        paddingHorizontal: 10,
+        marginBottom: 15,
+    },
+    modalButtons: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        width: '100%',
+    },
+    button: {
+        borderRadius: 20,
+        padding: 10,
+        elevation: 2,
+    },
+    buttonClose: {
+        backgroundColor: '#f44336',
+    },
+    buttonSubmit: {
+        backgroundColor: '#2196F3',
+    },
+    textStyle: {
+        color: 'white',
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
 });

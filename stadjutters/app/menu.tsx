@@ -1,10 +1,10 @@
-import React, {useEffect, useState} from 'react';
-import {View, Text, StyleSheet, Platform} from 'react-native';
-import Animated, {Easing, useSharedValue, useAnimatedStyle, withTiming, runOnJS} from 'react-native-reanimated';
-import {PanGestureHandler, GestureHandlerRootView, PanGestureHandlerGestureEvent} from 'react-native-gesture-handler';
-import {Link} from 'expo-router';
-import {useSession} from './SessionContext';
-import {supabase} from '@/lib/supabase'; // for communicating with database
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Platform } from 'react-native';
+import Animated, { Easing, useSharedValue, useAnimatedStyle, withTiming, runOnJS } from 'react-native-reanimated';
+import { PanGestureHandler, GestureHandlerRootView, PanGestureHandlerGestureEvent } from 'react-native-gesture-handler';
+import { Link } from 'expo-router';
+import { useSession } from './SessionContext';
+import { supabase } from '@/lib/supabase';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface MenuProps {
@@ -12,30 +12,30 @@ interface MenuProps {
     closeMenu: () => void;
 }
 
-const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
-    const {session} = useSession();
+const Menu: React.FC<MenuProps> = ({ visible, closeMenu }) => {
+    const { session } = useSession();
     const [username, setUsername] = useState('');
     const translateX = useSharedValue(250);
 
     const animatedStyle = useAnimatedStyle(() => {
         return {
-            transform: [{translateX: translateX.value}],
+            transform: [{ translateX: translateX.value }],
         };
     });
 
     useEffect(() => {
         if (visible) {
-            translateX.value = withTiming(0, {duration: 300, easing: Easing.inOut(Easing.ease)});
+            translateX.value = withTiming(0, { duration: 300, easing: Easing.inOut(Easing.ease) });
         } else {
-            translateX.value = withTiming(250, {duration: 300, easing: Easing.inOut(Easing.ease)});
+            translateX.value = withTiming(250, { duration: 300, easing: Easing.inOut(Easing.ease) });
         }
     }, [visible, translateX]);
 
     useEffect(() => {
         const fetchUsername = async () => {
             if (session?.user?.email) {
-                const {data, error} = await supabase
-                    .from('profiles') // name of database table
+                const { data, error } = await supabase
+                    .from('profiles')
                     .select('username')
                     .eq('id', session.user.id)
                     .single();
@@ -59,11 +59,10 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
 
     if (!visible) return null;
 
-    // Define top position conditionally based on platform
     const menuTopPosition = Platform.OS === 'ios' ? 90 : 115;
 
     return (
-        <GestureHandlerRootView style={[styles.menuWrapper, {top: menuTopPosition}]}>
+        <GestureHandlerRootView style={[styles.menuWrapper, { top: menuTopPosition }]}>
             <PanGestureHandler onGestureEvent={handleGesture}>
                 <Animated.View style={[styles.menu, animatedStyle]}>
                     <View style={styles.menuUser}>
@@ -87,48 +86,42 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
                     <View style={styles.menuItems}>
                         {session ? (
                             <>
-                            <View style={styles.menuItemDivider}/>
-                            <View style={styles.menuItemRow}>
-                                <Icon size={25} name="package" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="./menuItems/mijnVondsten.tsx" onPress={closeMenu} style={styles.menuItem}>Mijn
-                                    straat-/huisvondsten</Link>
-                            </View>
-                            <View style={styles.menuItemDivider}/>
-                            <View style={styles.menuItemRow}>
-                                <Icon size={25} name="star" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="./menuItems/mijnBeoordelingen.tsx" onPress={closeMenu} style={styles.menuItem}>Mijn
-                                    beoordelingen</Link>
-                            </View>
-                            <View style={styles.menuItemDivider}/>
-                            <View style={styles.menuItemRow}>
-                                <Icon size={25} name="bookmark" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="./menuItems/opgeslagenVondsten.tsx" onPress={closeMenu} style={styles.menuItem}>Opgeslagen
-                                    vondsten</Link>
-                            </View>
-                            <View style={styles.menuItemDivider}/>
-                            <View style={styles.menuItemRow}>
-                                <Icon size={25} name="cog" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="./menuItems/instellingen.tsx" onPress={closeMenu}
-                                      style={styles.menuItem}>Instellingen</Link>
-                            </View>
-                            <View style={styles.menuItemDivider}/>
-                            <View style={styles.menuItemRow}>
-                                <Icon size={25} name="account" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="/login" onPress={closeMenu}
-                                      style={[styles.menuItem, styles.ExtraSpacing]}>Account</Link>
-
-                            </View>
+                                <View style={styles.menuItemDivider} />
+                                <View style={styles.menuItemRow}>
+                                    <Icon size={25} name="package" color={'#7A3038'} style={styles.menuIcon} />
+                                    <Link href="/menuItems/mijnVondsten" onPress={closeMenu} style={styles.menuItem}>Mijn straat-/huisvondsten</Link>
+                                </View>
+                                <View style={styles.menuItemDivider} />
+                                <View style={styles.menuItemRow}>
+                                    <Icon size={25} name="star" color={'#7A3038'} style={styles.menuIcon} />
+                                    <Link href="/menuItems/mijnBeoordelingen" onPress={closeMenu} style={styles.menuItem}>Mijn beoordelingen</Link>
+                                </View>
+                                <View style={styles.menuItemDivider} />
+                                <View style={styles.menuItemRow}>
+                                    <Icon size={25} name="bookmark" color={'#7A3038'} style={styles.menuIcon} />
+                                    <Link href="/menuItems/opgeslagenVondsten" onPress={closeMenu} style={styles.menuItem}>Opgeslagen vondsten</Link>
+                                </View>
+                                <View style={styles.menuItemDivider} />
+                                <View style={styles.menuItemRow}>
+                                    <Icon size={25} name="cog" color={'#7A3038'} style={styles.menuIcon} />
+                                    <Link href="/menuItems/instellingen" onPress={closeMenu} style={styles.menuItem}>Instellingen</Link>
+                                </View>
+                                <View style={styles.menuItemDivider} />
+                                <View style={styles.menuItemRow}>
+                                    <Icon size={25} name="account" color={'#7A3038'} style={styles.menuIcon} />
+                                    <Link href="/login" onPress={closeMenu} style={[styles.menuItem, styles.ExtraSpacing]}>Account</Link>
+                                </View>
                             </>
-                        ) :
-                            (<>
-                                <View style={styles.menuItemDivider}/>
-                            <View style={styles.menuItemRow}>
-                                <Icon size={25} name="account" color={'#7A3038'} style={styles.menuIcon}/>
-                                <Link href="/login" onPress={closeMenu} style={[styles.menuItem, styles.ExtraSpacing]}>Login</Link>
-                            </View>
-                                <View style={styles.menuItemDivider}/>
-                            </>)
-                        }
+                        ) : (
+                            <>
+                                <View style={styles.menuItemDivider} />
+                                <View style={styles.menuItemRow}>
+                                    <Icon size={25} name="account" color={'#7A3038'} style={styles.menuIcon} />
+                                    <Link href="/login" onPress={closeMenu} style={[styles.menuItem, styles.ExtraSpacing]}>Login</Link>
+                                </View>
+                                <View style={styles.menuItemDivider} />
+                            </>
+                        )}
                     </View>
                 </Animated.View>
             </PanGestureHandler>
