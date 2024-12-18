@@ -135,6 +135,7 @@ export default function ChatsScreen() {
     }, [session]);
 
 
+
     const renderChatItem = ({ item }: { item: ChatItem }) => (
         <Pressable
             onPress={() => router.push(`/chats/${item.id}`)}
