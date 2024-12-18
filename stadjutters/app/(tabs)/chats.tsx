@@ -6,13 +6,13 @@ import {useRouter} from 'expo-router';
 import { supabase } from '@/lib/supabase';
 
 type ChatItem = {
-    id: number; // Receiver ID used as the chat identifier
-    message_content: string; // Last message in the chat
-    created_at: string; // Timestamp of the last message
-    sender_id: string; // Sender ID
-    receiver_id: string; // Receiver ID
-    is_read: boolean; // Read status of the last message
-    other_user_name: string; // Name of the other user in the chat
+    id: number;
+    message_content: string;
+    created_at: string;
+    sender_id: string;
+    receiver_id: string;
+    is_read: boolean;
+    other_user_name: string;
 };
 
 export default function ChatsScreen() {
@@ -134,27 +134,6 @@ export default function ChatsScreen() {
         fetchChats();
     }, [session]);
 
-    // const renderChatItem = ({ item }: { item: ChatItem }) => (
-    //     <Pressable
-    //         onPress={() => router.push(`/chats/${item.id}`)}
-    //         style={styles.chatPreview}
-    //     >
-    //         <View style={styles.textContainer}>
-    //             <Text style={styles.name}>{item.other_user_name}</Text>
-    //             <Text style={styles.message}>{item.message_content}</Text>
-    //         </View>
-    //         <View style={styles.infoContainer}>
-    //             <Text style={styles.timestamp}>
-    //                 {new Date(item.created_at).toLocaleTimeString()}
-    //             </Text>
-    //             {!item.is_read && (
-    //                 <View style={styles.notificationBlip}>
-    //                     <Text style={styles.notificationText}>●</Text>
-    //                 </View>
-    //             )}
-    //         </View>
-    //     </Pressable>
-    // );
 
     const renderChatItem = ({ item }: { item: ChatItem }) => (
         <Pressable
@@ -171,9 +150,10 @@ export default function ChatsScreen() {
                 <Text style={styles.timestamp}>
                     {new Date(item.created_at).toLocaleTimeString()}
                 </Text>
+                {/* Cirkel voor notificaties*/}
                 {!item.is_read && (
                     <View style={styles.notificationBlip}>
-                        <Text style={styles.notificationText}>●</Text>
+                        <Text style={styles.notificationText}>  {item.unread_count || ''}</Text>
                     </View>
                 )}
             </View>

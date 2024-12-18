@@ -106,11 +106,12 @@ export default function ChatPage() {
     }, [session, receiverId]);
 
     const markMessagesAsRead = async (receiverId: string, userId: string) => {
-        const { data, error } = await supabase
+        const {data, error} = await supabase
             .from('chatmessage')
-            .update({ is_read: true })
+            .update({is_read: true})
             .eq('receiver_id', userId)
-            .eq('sender_id', receiverId);
+            .eq('sender_id', receiverId)
+            .select('*'); // Ensure the updated rows are returned
 
         if (error) {
             console.error('Error updating is_read:', error);
@@ -142,7 +143,7 @@ export default function ChatPage() {
                             setMessages((prevMessages) =>
                                 prevMessages.map((msg) =>
                                     msg.id === updatedMessage.id
-                                        ? { ...msg, is_read: updatedMessage.is_read }
+                                        ? {...msg, is_read: updatedMessage.is_read}
                                         : msg
                                 )
                             );
@@ -225,9 +226,16 @@ export default function ChatPage() {
                         ]}
                     >
                         <Text style={styles.messageText}>{item.message_content}</Text>
-                        <Text style={styles.timestamp}>
-                            {new Date(item.created_at).toLocaleTimeString()}
-                        </Text>
+                        <View style={styles.infoContainer}>
+                            <Text style={styles.timestamp}>
+                                {new Date(item.created_at).toLocaleTimeString()}
+                            </Text>
+                            {item.sender_id === session?.user?.id && (
+                                <Text style={styles.vinkjes}>
+                                    {item.is_read ? '✔️✔️' : '✔️'}
+                                </Text>
+                            )}
+                        </View>
                     </View>
                 )}
                 style={styles.chatList}
@@ -310,5 +318,16 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 16,
         fontWeight: 'bold',
+    },
+    infoContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginTop: 5,
+    },
+    vinkjes: {
+        fontSize: 14,
+        color: '#555',
+        marginLeft: 8,
     },
 });
