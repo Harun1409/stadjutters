@@ -166,6 +166,15 @@ export default function ChatsScreen() {
         );
     };
 
+    if (!session) {
+        return (
+            <View style={styles.container}>
+                <Text>Log in om uw chatberichten te zien!</Text>
+            </View>
+        );
+    }
+
+
     if (loading) {
         return (
             <View style={styles.container}>
