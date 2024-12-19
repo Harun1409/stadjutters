@@ -1,12 +1,25 @@
-import { Image, StyleSheet, Button, Text, View, TextInput, TouchableWithoutFeedback, Keyboard, FlatList, ScrollView, LogBox, TouchableOpacity } from 'react-native';
-import * as ImagePicker from 'expo-image-picker'; 
+import {
+  Image,
+  StyleSheet,
+  Button,
+  Text,
+  View,
+  TextInput,
+  TouchableWithoutFeedback,
+  Keyboard,
+  FlatList,
+  ScrollView,
+  LogBox,
+  TouchableOpacity,
+} from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
 import { useSession } from '../SessionContext'; // Assuming this provides session info (user ID)
 import { supabase } from '../../lib/supabase'; // Correct import from your supabase.tsx file
 import * as FileSystem from 'expo-file-system'; // Allows you to read files from the local file system
 import { Buffer } from 'buffer';
 import { DropDownSelect } from 'react-native-simple-dropdown-select'; // Assuming you have this component available
-
+import * as Location from 'expo-location';
 
 global.Buffer = Buffer;
 
@@ -16,80 +29,107 @@ LogBox.ignoreLogs([
   'VirtualizedLists should never be nested inside plain ScrollViews',
 ]);
 
-
 export default function HomeScreen() {
-  const { session } = useSession(); // Assuming this provides session info (user ID)
+  const { session } = useSession();  // Assuming this provides session info (user ID)
   const [titlePlaatsen, onChangeTitle] = React.useState('');
   const [descriptionPlaatsen, onChangeDescription] = React.useState('');
-  const [image, setImage] = useState<string | null>(null); // Holds the image URI
+  const [images, setImages] = useState<string[]>([]); // Array to hold multiple image URIs
   const [uploading, setUploading] = useState(false); // Uploading state
   const [openCategory, setOpenCategory] = useState(false);
   const [valueCategory, setValueCategory] = useState<any>(null); // For storing the selected category
-  const [categories, setCategories] = useState<Category[]>([]); // Typen van de categorieën array als Category[]
+  const [categories, setCategories] = useState<Category[]>([]);  // Typen van de categorieën array als Category[]
   const [openMaterialType, setOpenMaterialType] = useState(false);
   const [valueMaterialType, setValueMaterialType] = useState<any>(null);
   const [materialTypes, setmaterialTypes] = useState<MaterialType[]>([]); // Typen van de materialTypes array als MaterialType[]
   const [selectedFindingType, setselectedFindingType] = useState('Huisvondst'); // State voor de geselecteerde segmentoptie (First of Second)
-  
-  
 
-//--------------------
-const [selectedLanguage, setSelectedLanguage] = useState();
-//--------------------
-// Stad ophalen van profiles in schema public
-const getStadFromProfile = async () => {
-  try {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('stad')
-      .eq('id', session?.user.id) // Haalt stad op voor de ingelogde gebruiker
-      .single(); // Verwacht slechts één rij
 
-    if (error) {
-      console.error('Fout bij het ophalen van stad:', error);
+  // LOCATION ------------------------------------------------
+  const [userCoordinates, setUserCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
+
+  const fetchUserLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        alert('Locatietoestemming is vereist voor Straatvondst.');
+        return;
+      }
+      const location = await Location.getCurrentPositionAsync({});
+      setUserCoordinates({
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+      //console.log('User coordinates:', location.coords);
+    } catch (error) {
+      console.error('Fout bij het ophalen van locatie:', error);
+      alert('Kon locatie niet ophalen.');
+    }
+  };
+  
+  const handleStraatvondstSelection = () => {
+    setselectedFindingType('Straatvondst');
+    fetchUserLocation();
+  };
+
+  // Prepare location coordinates if applicable
+  const location = userCoordinates
+  ? `(${userCoordinates.latitude}, ${userCoordinates.longitude})`
+  : null;
+  // END LOCATION --------------------------------------------
+
+  // Stad ophalen van profiles in schema public
+  const getStadFromProfile = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('stad')
+        .eq('id', session?.user.id) // Haalt stad op voor de ingelogde gebruiker
+        .single(); // Verwacht slechts één rij
+
+      if (error) {
+        console.error('Fout bij het ophalen van stad:', error);
+        return null;
+      }
+
+      return data.stad; // Geeft de stad terug
+    } catch (error) {
+      console.error('Onverwachte fout bij het ophalen van stad:', error);
       return null;
     }
-
-    return data.stad; // Geeft de stad terug
-  } catch (error) {
-    console.error('Onverwachte fout bij het ophalen van stad:', error);
-    return null;
-  }
-};
+  };
 
   interface Category {
     id: number;
     description: string;
   }
-
   // Functie om categorieën op te halen van Supabase
   const retrieveCategories = async () => {
     const { data, error } = await supabase
       .from('category')
-      .select('id, description');  // Verkrijg de id en description kolommen
+      .select('id, description'); // Verkrijg de id en description kolommen
 
     if (error) {
       console.error('Fout bij het ophalen van categorieën:', error);
       return;
     }
-
-    console.log('categorieën:', data);  // Logs de opgehaalde categorieën
-    setCategories(data || []);  // Zet de categorieën in de staat
+    //console.log('categorieën:', data);  // Logs de opgehaalde categorieën
+    setCategories(data || []);
   };
 
   useEffect(() => {
     retrieveCategories(); // Haal categorieën op bij het laden van de component
   }, []);
 
-  // Zet de categorieën om naar het formaat dat de dropdown verwacht
+    // Zet de categorieën om naar het formaat dat de dropdown verwacht
+
   const categoryOptions = categories.map((category) => ({
     id: category.id,
-    name: category.description,  // Zet description om naar 'name'
+    name: category.description, // Zet description om naar 'name'
   }));
 
   //-----------------------------------------------
 // Definieer een type voor de materialTypes
-    interface MaterialType {
+  interface MaterialType {
     id: number;
     description: string;
   }
@@ -98,32 +138,30 @@ const getStadFromProfile = async () => {
   const retrieveMaterialType = async () => {
     const { data, error } = await supabase
       .from('materialType')
-      .select('id, description');  // Verkrijg de id en description kolommen
+      .select('id, description'); // Verkrijg de id en description kolommen
 
     if (error) {
       console.error('Fout bij het ophalen van materialTypes:', error);
       return;
     }
 
-    console.log('MaterialTypes:', data);  // Logs de opgehaalde categorieën
-    setmaterialTypes(data || []);  // Zet de categorieën in de staat
+    //console.log('MaterialTypes:', data);  // Logs de opgehaalde categorieën
+    setmaterialTypes(data || []); // Zet de categorieën in de staat
   };
 
   useEffect(() => {
     retrieveMaterialType(); // Haal categorieën op bij het laden van de component
   }, []);
 
-  // Zet de categorieën om naar het formaat dat de dropdown verwacht
+    // Zet de categorieën om naar het formaat dat de dropdown verwacht
   const materialTypeOptions = materialTypes.map((materiaaltype) => ({
     id: materiaaltype.id,
-    name: materiaaltype.description,  // Zet description om naar 'name'
+    name: materiaaltype.description, // Zet description om naar 'name'
   }));
-  //-----------------------------------------------
+    //-----------------------------------------------
 
-
-
-  // Functie om een afbeelding uit de galerij te kiezen
-  const pickImage = async () => {
+  // Functie om een afbeeldingen uit de galerij te kiezen
+  const pickImages = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       alert('Toestemming voor toegang tot de filmrol is vereist!');
@@ -132,136 +170,169 @@ const getStadFromProfile = async () => {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
+      allowsMultipleSelection: true,
       quality: 1,
+      selectionLimit: 3,
     });
 
-    if (!result.canceled && result.assets && result.assets[0].uri) {
-      setImage(result.assets[0].uri);
+    if (!result.canceled && result.assets) {
+      const selectedImages = result.assets.map((asset) => asset.uri);
+      setImages(selectedImages);
     }
   };
 
-  // Functie om een nieuwe foto te maken
-  const takePhoto = async () => {
-    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permissionResult.granted) {
-      alert('Toestemming voor toegang tot de filmrol is vereist!');
-      return;
-    }
-
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled && result.assets && result.assets[0].uri) {
-      setImage(result.assets[0].uri);
-    }
-  };
-
-  // Functie om de afbeelding naar Supabase te uploaden
-  const uploadToDatabase = async () => {
+    // Functie om een foto te maken met de camera
+    const takePhoto = async () => {
+      if (images.length >= 3) {
+        alert('Je kunt maximaal 3 afbeeldingen selecteren.');
+        return;
+      }
     
-    if (!image) {
-      alert('Geen afbeelding geselecteerd');
-      return;
-    }
-  
-    setUploading(true);
-  
-    const fileName = image.split('/').pop();
-    const fileExt = fileName?.split('.').pop() || 'jpeg';
-    const filePath = `public/${Date.now()}.${fileExt}`;
-    console.log("Afbeelding uploaden:", { uri: image, fileName, filePath });
-  
-    try {
-      // Lees het bestand als base64
-      const fileContent = await FileSystem.readAsStringAsync(image, {
-        encoding: FileSystem.EncodingType.Base64,
+      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+      if (!permissionResult.granted) {
+        alert('Toestemming voor toegang tot de camera is vereist!');
+        return;
+      }
+    
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
       });
-  
-      const buffer = Buffer.from(fileContent, 'base64');
-  
-      console.log("Buffer gemaakt voor uploaden:", buffer.byteLength);
-  
-      // Upload het bestand naar Supabase
-      const { data, error } = await supabase.storage
-        .from('UserUploadedImages')
-        .upload(filePath, buffer, {
-          contentType: `image/${fileExt}`,
-          cacheControl: '3600',
-          upsert: false,
-        });
-  
-      if (error) throw error;
-  
-      console.log('Upload successvol:', data);
-  
-      // Verkrijg de publieke URL van het geüploade bestand
-      const publicUrl = supabase.storage
-        .from('UserUploadedImages')
-        .getPublicUrl(filePath).data.publicUrl;
-  
-      console.log('Image public URL:', publicUrl);
-  
-      // Haal de stad op uit de gebruikersprofiel met de functie getStadFromProfile
-      const stad = await getStadFromProfile(); // Haal de stad van de gebruiker
-      
-    if(!stad){
-      alert("Geef een woonplaats op in je account om door te kunnen gaan")
+    
+      if (!result.canceled && result.assets) {
+        const capturedImage = result.assets.map((asset) => asset.uri);
+        setImages((prevImages) => [...prevImages, ...capturedImage]);
+      }
+    };
+    
+
+  const removeImage = (uri: string) => {
+    setImages(images.filter((image) => image !== uri));
+  };
+
+    // Functie om de afbeelding naar Supabase te uploaden
+  const uploadToDatabase = async () => {
+    if (!titlePlaatsen) {
+      alert('Geef een titel op om door te kunnen gaan');
       return;
     }
+    if (!descriptionPlaatsen) {
+      alert('Geef een beschrijving op om door te kunnen gaan');
+      return;
+    }
+    if (!valueCategory?.id) {
+      alert('Geef een categorie op om door te kunnen gaan');
+      return;
+    }
+    if (!valueMaterialType?.id) {
+      alert('Geef een materiaaltype op om door te kunnen gaan');
+      return;
+    }
+    if (!location) {
+      alert('Locatie toestemming is vereist voor straatvondsten,');
+      return;
+    }
+    if (images.length === 0) {
+      alert('Geen afbeeldingen geselecteerd');
+      return;
+    }
+
+    setUploading(true);
+    try {
+    
+      const urls: string[] = [];
+      for (const image of images) {
+        const fileName = image.split('/').pop();
+        const fileExt = fileName?.split('.').pop() || 'jpeg';
+        const filePath = `public/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExt}`;
+
+        const fileContent = await FileSystem.readAsStringAsync(image, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+
+        const buffer = Buffer.from(fileContent, 'base64');
+
+        // Upload het bestand naar Supabase
+        const { data, error } = await supabase.storage
+          .from('UserUploadedImages')
+          .upload(filePath, buffer, {
+            contentType: `image/${fileExt}`,
+            cacheControl: '3600',
+            upsert: false,
+          });
+
+        if (error) throw error;
+
+        console.log('Upload successvol:', data);
+
+        // Verkrijg de publieke URL van het geüploade bestand
+        const publicUrl = supabase.storage
+          .from('UserUploadedImages')
+          .getPublicUrl(filePath).data.publicUrl;
+
+        urls.push(publicUrl);
+      }
+
+      // Haal de stad op uit de gebruikersprofiel met de functie getStadFromProfile
+      const stad = await getStadFromProfile();  // Haal de stad van de gebruiker
+
+      if (!stad) {
+        alert('Geef een woonplaats op in je account om door te kunnen gaan');
+        return;
+      }
+
+      //console.log("User ID:", session?.user?.id);
   
-      console.log("User ID:", session?.user?.id);
-  
+       
+
       // Voeg metadata van de afbeelding toe aan de database
       const { error: dbError } = await supabase
         .from('findings')
         .insert([
           {
-            image_url: publicUrl,
+            image_url: urls.join(','),
             uid: session?.user.id,
             title: titlePlaatsen,
             description: descriptionPlaatsen,
             categoryId: valueCategory?.id,
             materialTypeId: valueMaterialType?.id,
-            stad: stad, 
-            findingTypeId: selectedFindingType
+            stad: stad,
+            findingTypeId: selectedFindingType,
+            location: location, // Save location
           },
         ]);
-  
+
       if (dbError) throw dbError;
-  
-      alert('Afbeelding geüpload en succesvol opgeslagen!');
+
+      alert('Afbeeldingen geüpload en succesvol opgeslagen!');
+      setImages([]);
     } catch (error) {
-      console.error('Fout bij het uploaden van afbeelding:', error);
-      alert('Fout bij het uploaden van afbeelding:');
+      //console.error('Fout bij het uploaden van afbeeldingen:', error);
+      alert('Fout bij het uploaden van afbeeldingen:');
     } finally {
       setUploading(false);
     }
   };
 
-  
-
   return (
-    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()} >
-      <ScrollView>
-      <View style={styles.kikker}>
-        <TextInput 
-          style={styles.input} 
-          onChangeText={onChangeTitle} 
-          value={titlePlaatsen} 
-          placeholder="Titel"
-        />
-        <TextInput
-          editable
-          multiline
-          style={styles.inputDescription}
-          onChangeText={onChangeDescription}
-          value={descriptionPlaatsen}
-          placeholder="Beschrijving"
-        />
-        <View style={styles.dropDownStyle}>
+    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
+      <ScrollView style={{backgroundColor: 'white'}}>
+        <View style={styles.kikker}>
+          <TextInput
+            style={styles.input}
+            onChangeText={onChangeTitle}
+            value={titlePlaatsen}
+            placeholder="Titel"
+          />
+          <TextInput
+            editable
+            multiline
+            style={styles.inputDescription}
+            onChangeText={onChangeDescription}
+            value={descriptionPlaatsen}
+            placeholder="Beschrijving"
+          />
+          <View style={styles.dropDownStyle}>
           <View style={styles.dropDownContainer}>
             <DropDownSelect
               placeholder="Categorie"
@@ -308,44 +379,43 @@ const getStadFromProfile = async () => {
             />
           </View>
         </View>
-        <View style={styles.segmentedControlWrapper}>
-          <TouchableOpacity
-            style={[
-              styles.segmentButton,
-              selectedFindingType === 'Huisvondst' && styles.activeSegmentButton,
-            ]}
-            onPress={() => setselectedFindingType('Huisvondst')}
-          >
-            <Text
+          <View style={styles.segmentedControlWrapper}>
+            <TouchableOpacity
               style={[
-                styles.segmentButtonText,
-                selectedFindingType === 'Huisvondst' && styles.activeSegmentButtonText,
+                styles.segmentButton,
+                selectedFindingType === 'Huisvondst' && styles.activeSegmentButton,
               ]}
+              onPress={() => setselectedFindingType('Huisvondst')}
             >
-              Huisvondst
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.segmentButton,
-              selectedFindingType === 'Straatvondst' && styles.activeSegmentButton,
-            ]}
-            onPress={() => setselectedFindingType('Straatvondst')}
-          >
-            <Text
+              <Text
+                style={[
+                  styles.segmentButtonText,
+                  selectedFindingType === 'Huisvondst' && styles.activeSegmentButtonText,
+                ]}
+              >
+                Huisvondst
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[
-                styles.segmentButtonText,
-                selectedFindingType === 'Straatvondst' && styles.activeSegmentButtonText,
+                styles.segmentButton,
+                selectedFindingType === 'Straatvondst' && styles.activeSegmentButton,
               ]}
+              onPress={handleStraatvondstSelection}
             >
-              Straatvondst
-            </Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.dropDownStyle}>
+              <Text
+                style={[
+                  styles.segmentButtonText,
+                  selectedFindingType === 'Straatvondst' && styles.activeSegmentButtonText,
+                ]}
+              >
+                Straatvondst
+              </Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.dropDownStyle}>
           <View style={styles.dropDownContainer}>
-            <TouchableOpacity style={styles.customButton} onPress={pickImage}>
+            <TouchableOpacity style={styles.customButton} onPress={pickImages}>
               <Text style={styles.buttonText}>Foto uit gallerij</Text>
             </TouchableOpacity>
           </View>
@@ -355,27 +425,33 @@ const getStadFromProfile = async () => {
             </TouchableOpacity>
           </View>
         </View>
-        
-        {image && (
+          
           <View style={styles.imageContainer}>
-            <Text>Geselecteerde afbeelding:</Text>
-            <Image source={{ uri: image }} style={styles.image} />
+            {images.map((uri, index) => (
+              <View key={index} style={styles.imageWrapper}>
+                <Image source={{ uri }} style={styles.image} />
+                <TouchableOpacity onPress={() => removeImage(uri)} style={styles.removeButton}>
+                  <Text style={styles.removeButtonText}>X</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
           </View>
-        )}
-        <TouchableOpacity
-  style={[styles.customButton, uploading && styles.customButton]}
-  onPress={uploadToDatabase}
-  disabled={uploading}
->
-  <Text style={styles.buttonText}>Plaatsen</Text>
-</TouchableOpacity>
-      </View>
+          <TouchableOpacity
+            style={[styles.customButtonPlaatsen, uploading && styles.customButtonDisabled]}
+            onPress={uploadToDatabase}
+            disabled={uploading}
+          >
+            <Text style={styles.buttonText}>{uploading ? 'Uploading...' : 'Plaatsen'}</Text>
+          </TouchableOpacity>
+          
+        </View>
       </ScrollView>
     </TouchableWithoutFeedback>
   );
 }
 
 const styles = StyleSheet.create({
+  // Your existing styles, plus:
   kikker: {
     display: 'flex',
     flex: 1,
@@ -399,25 +475,27 @@ const styles = StyleSheet.create({
     borderColor: 'lightgray'
   },
   imageContainer: {
-    marginTop: 20,
-    alignItems: 'center',
+    marginTop: 0,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    marginBottom: 20,
   },
   image: {
-    width: 200,
-    height: 200,
-    resizeMode: 'cover',
-    marginBottom: 10,
+    width: '100%', 
+    height: '100%',
+    borderRadius: 5, 
   },
   dropDownStyle: {
-    flexDirection: 'row', // Zorgt ervoor dat de elementen naast elkaar komen
-    justifyContent: 'space-between', // Ruimte tussen de dropdowns
-    alignItems: 'flex-start', // Optioneel: om de items verticaal te centreren
+    flexDirection: 'row',
+    justifyContent: 'space-between', 
+    alignItems: 'flex-start', 
     width: '88%',
-    marginVertical: 10, // Voeg wat verticale ruimte toe
+    marginVertical: 10, 
   },
   dropDownContainer: {
-    flex: 1, // Zorgt ervoor dat beide dropdowns evenveel ruimte innemen
-    marginHorizontal: 5, // Voeg wat ruimte tussen de dropdowns toe
+    flex: 1, 
+    marginHorizontal: 5, 
   },
   segmentedControlWrapper: {
     width: '85%',
@@ -461,9 +539,44 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center', 
   },
+  customButtonPlaatsen: {
+    backgroundColor: '#3498db',
+    paddingVertical: 12,
+    paddingHorizontal: 20, 
+    borderRadius: 5, 
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center', 
+    width: '85%',
+  },
   buttonText: {
     color: 'white', 
     fontSize: 15, 
     fontWeight: 'bold', 
+  },
+  imageWrapper: {
+    position: 'relative',
+    margin: 5, 
+    width: 100, 
+    height: 100, 
+  },
+  removeButton: {
+    position: 'absolute',
+    top: -5, 
+    right: -5, 
+    backgroundColor: 'red',
+    borderRadius: 15,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  customButtonDisabled: {
+    backgroundColor: 'gray',
   },
 });
