@@ -136,30 +136,35 @@ export default function ChatsScreen() {
 
 
 
-    const renderChatItem = ({ item }: { item: ChatItem }) => (
-        <Pressable
-            onPress={() => router.push(`/chats/${item.id}`)}
-            style={styles.chatPreview}
-        >
-            <View style={styles.textContainer}>
-                <Text style={styles.name}>{item.other_user_name}</Text>
-                <Text style={styles.message} numberOfLines={1} ellipsizeMode="tail">
-                    {item.message_content}
-                </Text>
-            </View>
-            <View style={styles.infoContainer}>
-                <Text style={styles.timestamp}>
-                    {new Date(item.created_at).toLocaleTimeString()}
-                </Text>
-                {/* Cirkel voor notificaties*/}
-                {!item.is_read && (
-                    <View style={styles.notificationBlip}>
-                        <Text style={styles.notificationText}></Text>
-                    </View>
-                )}
-            </View>
-        </Pressable>
-    );
+    const renderChatItem = ({ item }: { item: ChatItem }) => {
+        const userId = session?.user?.id; // Current user's ID
+        const hasUnreadMessages =
+            !item.is_read && item.receiver_id === userId; // Unread message received by the current user
+
+        return (
+            <Pressable
+                onPress={() => router.push(`/chats/${item.id}`)}
+                style={styles.chatPreview}
+            >
+                <View style={styles.textContainer}>
+                    <Text style={styles.name}>{item.other_user_name}</Text>
+                    <Text style={styles.message} numberOfLines={1} ellipsizeMode="tail">
+                        {item.message_content}
+                    </Text>
+                </View>
+                <View style={styles.infoContainer}>
+                    <Text style={styles.timestamp}>
+                        {new Date(item.created_at).toLocaleTimeString()}
+                    </Text>
+                    {hasUnreadMessages && (
+                        <View style={styles.notificationBlip}>
+                            <Text style={styles.notificationText}>●</Text>
+                        </View>
+                    )}
+                </View>
+            </Pressable>
+        );
+    };
 
     if (loading) {
         return (
