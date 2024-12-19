@@ -12,19 +12,20 @@ import {
     Alert,
     Image,
 } from 'react-native';
-import { usePathname } from 'expo-router';
-import { supabase } from '@/lib/supabase';
-import { Session } from '@supabase/supabase-js';
-import uuid from "expo-modules-core/src/uuid";
+import {usePathname} from 'expo-router';
+import {supabase} from '@/lib/supabase';
+import {Session} from '@supabase/supabase-js';
 
+
+// Functie om berichten op te halen tussen de huidige gebruiker en chatpartner
 const fetchMessages = async (userId: string, chatPartnerId: string) => {
-    const { data, error } = await supabase
+    const {data, error} = await supabase
         .from('chatmessage')
         .select('*')
         .or(
             `and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`
         )
-        .order('created_at', { ascending: true });
+        .order('created_at', {ascending: true});
 
     if (error) {
         console.error('Error fetching messages:', error);
@@ -34,34 +35,36 @@ const fetchMessages = async (userId: string, chatPartnerId: string) => {
     return data;
 };
 
-const sendMessageToBackend = async (
-    senderId: string,
-    receiverId: string,
-    messageContent: string
-) => {
-    const { data, error } = await supabase
-        .from('chatmessage')
-        .insert([
-            {
-                sender_id: senderId,
-                receiver_id: receiverId,
-                message_content: messageContent,
-                is_read: false,
-                created_at: new Date().toISOString(),
-            },
-        ])
-        .single();
 
-    if (error) {
-        console.error('Error sending message:', error);
-        return null;
-    }
+// const sendMessageToBackend = async (
+//     senderId: string,
+//     receiverId: string,
+//     messageContent: string
+// ) => {
+//     const {data, error} = await supabase
+//         .from('chatmessage')
+//         .insert([
+//             {
+//                 sender_id: senderId,
+//                 receiver_id: receiverId,
+//                 message_content: messageContent,
+//                 is_read: false,
+//                 created_at: new Date().toISOString(),
+//             },
+//         ])
+//         .single();
+//
+//     if (error) {
+//         console.error('Error sending message:', error);
+//         return null;
+//     }
+//
+//     return data;
+// };
 
-    return data;
-};
-
-const insertReportedMessage = async (reportsUser: string, reportReason: string) => {
-    const { data, error } = await supabase
+// Functie om een chat te reporten
+const reportMessage = async (reportsUser: string, reportReason: string) => {
+    const {data, error} = await supabase
         .from('reportedMessages')
         .insert([
             {
@@ -83,15 +86,15 @@ export default function ChatPage() {
     const receiverId = pathname.split('/').pop();
     const [session, setSession] = useState<Session | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
-    useEffect(() => {
-        console.log('Messages:', messages); // Bekijk alle berichten in de state
-    }, [messages]);
+    // useEffect(() => {
+    //     console.log('Messages:', messages); // Bekijk alle berichten in de state
+    // }, [messages]);
     const [inputMessage, setInputMessage] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [reportReason, setReportReason] = useState('');
 
-    // Fetch the logged-in user's session
+    // Sessie ophalen
     useEffect(() => {
         const fetchSession = async () => {
             const {data} = await supabase.auth.getSession();
@@ -109,15 +112,16 @@ export default function ChatPage() {
         };
     }, []);
 
+    // Berichten ophalen en markeren als gelezen
     useEffect(() => {
         const loadMessages = async () => {
             if (session?.user?.id && receiverId) {
                 const fetchedMessages = await fetchMessages(session.user.id, receiverId);
 
-                console.log('Fetched messages:', fetchedMessages); // Log alle berichten
+                // console.log('Fetched messages:', fetchedMessages); // Log alle berichten
                 setMessages(fetchedMessages);
 
-                // Mark all received messages as read
+                // Alle ontvangen berichten markeren als gelezen
                 await markMessagesAsRead(receiverId, session.user.id);
 
                 setLoading(false);
@@ -133,15 +137,17 @@ export default function ChatPage() {
             .update({is_read: true})
             .eq('receiver_id', userId)
             .eq('sender_id', receiverId)
-            .select('*'); // Ensure the updated rows are returned
+        // .select('*'); // Ensure the updated rows are returned
 
         if (error) {
             console.error('Error updating is_read:', error);
-        } else {
-            console.log('Updated messages to read:', data);
         }
+        // else {
+        //     console.log('Updated messages to read:', data);
+        // }
     };
 
+    // Berichten updaten in real-time
     useEffect(() => {
         const setupRealTime = async () => {
             if (!session?.user?.id || !receiverId) return;
@@ -159,23 +165,21 @@ export default function ChatPage() {
                     (payload) => {
                         const newMessage = payload.new;
                         setMessages((prevMessages) => [...prevMessages, newMessage]);
-                        console.log('Realtime update:', payload);
-
-                        if (payload.eventType === 'UPDATE') {
-                            const updatedMessage = payload.new;
-
-                            setMessages((prevMessages) =>
-                                prevMessages.map((msg) =>
-                                    msg.id === updatedMessage.id
-                                        ? {...msg, is_read: updatedMessage.is_read}
-                                        : msg
-                                )
-                            );
-                        }
+                        // console.log('Realtime update:', payload);
+                        //
+                        // if (payload.eventType === 'UPDATE') {
+                        //     const updatedMessage = payload.new;
+                        //
+                        //     setMessages((prevMessages) =>
+                        //         prevMessages.map((msg) =>
+                        //             msg.id === updatedMessage.id
+                        //                 ? {...msg, is_read: updatedMessage.is_read}
+                        //                 : msg
+                        //         )
+                        //     );
+                        // }
 
                         if (payload.eventType === 'INSERT') {
-                            const newMessage = payload.new;
-
                             setMessages((prevMessages) => [...prevMessages, newMessage]);
                         }
                     }
@@ -190,6 +194,7 @@ export default function ChatPage() {
         setupRealTime();
     }, [session?.user?.id, receiverId]);
 
+    // Bericht versturen
     const handleSendMessage = async () => {
         if (!inputMessage.trim() || !session?.user?.id || !receiverId) return;
 
@@ -203,10 +208,9 @@ export default function ChatPage() {
 
         // Voeg het bericht direct toe aan de lokale staat
         setMessages((prev) => [...prev, newMessage]);
+        const {data, error} = await supabase.from('chatmessage').insert([newMessage]).select('*').single();
 
-        const { data, error } = await supabase.from('chatmessage').insert([newMessage]).select('*').single();
-
-        console.log('Inserted Message Response:', data); // Debug: Bekijk de geretourneerde data
+        // console.log('Inserted Message Response:', data); // Debug: Bekijk de geretourneerde data
         if (error) {
             console.error('Error sending message:', error);
             // Verwijder lokaal toegevoegd bericht als het invoegen mislukt
@@ -220,38 +224,24 @@ export default function ChatPage() {
         setModalVisible(true);
     };
 
+
+    // Indienen van een rapport
     const handleReportSubmit = async () => {
-        try {
-            // Haal de ingelogde gebruiker-ID op via Supabase auth
-            const {
-                data: { user },
-                error: userError,
-            } = await supabase.auth.getUser();
-
-            if (userError || !user) {
-                console.error('Gebruiker niet ingelogd:', userError);
-                alert('Je moet ingelogd zijn om een beoordeling te plaatsen.');
-                return;
-            }
-
-
         if (!reportReason.trim() || !session?.user?.id) {
-            Alert.alert('Error', 'Please provide a report reason.');
+            Alert.alert('Error', 'Geef een reden voor je rapport.');
             return;
         }
 
-        await insertReportedMessage(session.user.id, reportReason);
+        await reportMessage(session.user.id, reportReason);
         setModalVisible(false);
         setReportReason('');
-        Alert.alert('Success', 'User has been successfully reported.');
-    } catch (error){
-        console.error('Error reporting user:', error);}
-    }
+        Alert.alert('Succes', 'Gebruiker succesvol gerapporteerd.');
+    };
 
     if (!receiverId) {
         return (
             <View style={styles.container}>
-                <Text>No chat ID provided</Text>
+                <Text>Geen Chat-ID opgegeven</Text>
             </View>
         );
     }
@@ -259,7 +249,7 @@ export default function ChatPage() {
     if (loading) {
         return (
             <View style={styles.container}>
-                <Text>Loading...</Text>
+                <Text>Berichten laden...</Text>
             </View>
         );
     }
@@ -280,7 +270,7 @@ export default function ChatPage() {
             <FlatList
                 data={messages}
                 keyExtractor={(item, index) => (item.id ? item.id.toString() : `temp-${index}`)}
-                renderItem={({ item }) => (
+                renderItem={({item}) => (
                     <View
                         style={[
                             styles.messageBubble,
@@ -301,7 +291,7 @@ export default function ChatPage() {
                     </View>
                 )}
                 style={styles.chatList}
-                contentContainerStyle={{ paddingBottom: 10 }}
+                contentContainerStyle={{paddingBottom: 10}}
             />
             <View style={styles.inputContainer}>
                 <TextInput
