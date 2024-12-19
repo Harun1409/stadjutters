@@ -15,6 +15,7 @@ import {
 import {usePathname} from 'expo-router';
 import {supabase} from '@/lib/supabase';
 import {Session} from '@supabase/supabase-js';
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 
 // Functie om berichten op te halen tussen de huidige gebruiker en chatpartner
@@ -260,11 +261,10 @@ export default function ChatPage() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <View style={styles.header}>
+                {/* Report chat knop */}
                 <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
-                    <Image
-                        source={require('../../assets/images/report-icon.jpg')}
-                        style={styles.reportIcon}
-                    />
+                    <Icon size={25} name="flag-outline" color="#000000"/>
+                    <Text style={styles.reportText}>Chat rapporteren</Text>
                 </TouchableOpacity>
             </View>
             <FlatList
@@ -298,10 +298,10 @@ export default function ChatPage() {
                     style={styles.textInput}
                     value={inputMessage}
                     onChangeText={setInputMessage}
-                    placeholder="Type a message..."
+                    placeholder="Typ een bericht..."
                 />
                 <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-                    <Text style={styles.sendButtonText}>Send</Text>
+                    <Text style={styles.sendButtonText}>Versturen</Text>
                 </TouchableOpacity>
             </View>
             <Modal
@@ -426,15 +426,23 @@ const styles = StyleSheet.create({
         color: '#555',
         marginLeft: 8,
     },
+
     reportButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
         padding: 10,
         borderRadius: 5,
-        alignSelf: 'center',
+    },
+    reportText: {
+        fontSize: 16,
+        color: '#000',
+        marginLeft: 8,
     },
     reportIcon: {
         width: 24,
         height: 24,
     },
+
     modalView: {
         margin: 20,
         backgroundColor: 'white',
@@ -485,5 +493,7 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         textAlign: 'center',
-    },
+    }, menuIcon: {
+        marginRight: 2,
+    }
 });
