@@ -272,7 +272,7 @@ export default function ChatPage() {
             <View style={styles.header}>
                 <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
                     <Image
-                        // source={require('C:\\Users\\Gebruiker\\WebstormProjects\\stadjutters\\stadjutters\\assets\\images\\report-icon.jpg')}
+                        source={require('../../assets/images/report-icon.jpg')}
                         style={styles.reportIcon}
                     />
                 </TouchableOpacity>
