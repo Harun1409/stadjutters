@@ -313,25 +313,25 @@ export default function ChatPage() {
                 }}
             >
                 <View style={styles.modalView}>
-                    <Text style={styles.modalText}>Report Reason</Text>
+                    <Text style={styles.modalText}>Chat rapporteren</Text>
                     <TextInput
                         style={styles.modalTextInput}
                         value={reportReason}
                         onChangeText={setReportReason}
-                        placeholder="Wat is de reden van je report?"
+                        placeholder="Voer de reden in..."
                     />
                     <View style={styles.modalButtons}>
                         <TouchableOpacity
                             style={[styles.button, styles.buttonClose]}
                             onPress={() => setModalVisible(!modalVisible)}
                         >
-                            <Text style={styles.textStyle}>Cancel</Text>
+                            <Text style={styles.textStyleCancelButton}>Annuleren</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.button, styles.buttonSubmit]}
                             onPress={handleReportSubmit}
                         >
-                            <Text style={styles.textStyle}>Submit</Text>
+                            <Text style={styles.textStyle}>Verzenden</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -484,7 +484,10 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     buttonClose: {
-        backgroundColor: '#f44336',
+        // backgroundColor: '#f44336',
+        backgroundColor: 'white',
+        borderColor: '#f44336',
+        borderWidth: 1,
     },
     buttonSubmit: {
         backgroundColor: '#2196F3',
@@ -493,7 +496,13 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         textAlign: 'center',
-    }, menuIcon: {
+    },
+    textStyleCancelButton: {
+        color: '#f44336',
+        fontWeight: 'bold',
+        textAlign: 'center',
+    },
+    menuIcon: {
         marginRight: 2,
     }
 });
