@@ -61,7 +61,7 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
 
     if (!visible) return null;
 
-    const menuTopPosition = Platform.OS === 'ios' ? 90 : 115;
+    const menuTopPosition = Platform.OS === 'ios' ? 90 : 92;
 
     // Generieke component voor menu-items
     const MenuItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => (
