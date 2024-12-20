@@ -1,4 +1,5 @@
 import {
+  SafeAreaView,
   Image,
   StyleSheet,
   Button,
@@ -305,8 +306,9 @@ export default function HomeScreen() {
         const publicUrl = supabase.storage
           .from('UserUploadedImages')
           .getPublicUrl(filePath).data.publicUrl;
-
-        urls.push(publicUrl);
+          const publicUrlCorrect = publicUrl.split('/').pop() || '';
+          console.log("--------" + publicUrlCorrect)
+        urls.push(publicUrlCorrect);
       }
 
       // Haal de stad op uit de gebruikersprofiel met de functie getStadFromProfile
@@ -360,6 +362,8 @@ export default function HomeScreen() {
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <ScrollView style={{backgroundColor: 'white'}}>
         <View style={styles.kikker}>
+
+          
         <View style={styles.inputContainer}>
         <TextInput
           style={styles.input}

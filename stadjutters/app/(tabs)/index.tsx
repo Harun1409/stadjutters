@@ -1,56 +1,43 @@
-import {
-  Button,
-  Text,
-  TextInput,
-  TouchableWithoutFeedback,
-  Keyboard,
-  FlatList,
-  ScrollView,
-  LogBox,
-  TouchableOpacity,
-} from 'react-native'; 
-import { Image, StyleSheet, Platform, View } from 'react-native';
 import React, { useState, useEffect } from 'react';
-import { useSession } from '../SessionContext'; // Assuming this provides session info (user ID)
-import { supabase } from '../../lib/supabase'; // Correct import from your supabase.tsx file
-import 'react-native-gesture-handler';
+import { 
+  ScrollView, 
+  StyleSheet, 
+  Text, 
+  View, 
+  Image 
+} from 'react-native';
+import { supabase } from '../../lib/supabase';
 
-const mktest = '';
 interface Finding {
   title: string;
   description: string;
-  image_url: string | null; // Ensure image_url can be null
+  image_url: string | null;
 }
-//console.log("-----------------------")
-// Fetch findings and include image URL
+
 const fetchFindings = async (): Promise<Finding[]> => {
   try {
     const { data, error } = await supabase
-      .from('findings') // Your table name
-      .select('title, description, image_url'); // Include 'image_url' in the query
-      //const blabla = data;
-      //console.log(data)
+      .from('findings')
+      .select('title, description, image_url');
+    
     if (error) {
       console.error('Error fetching data:', error);
       return [];
     }
 
-    return data as Finding[]; // Typecast to Finding[]
+    return data as Finding[];
   } catch (error) {
     console.error('Unexpected error fetching data:', error);
     return [];
   }
 };
-//console.log(blabla.toString)
-
-
 
 const fetchSignedUrl = async (path: string) => {
   try {
     const { data, error } = await supabase
       .storage
       .from('UserUploadedImages/public')
-      .createSignedUrl(path, 60); // Create signed URL valid for 60 seconds
+      .createSignedUrl(path, 60);
 
     if (error) {
       console.error('Error creating signed URL:', error);
@@ -66,28 +53,15 @@ const fetchSignedUrl = async (path: string) => {
 
 export default function HomeScreen() {
   const [findings, setFindings] = useState<Finding[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const getFindings = async () => {
       const data = await fetchFindings();
-
-      // Fetch signed URLs for each finding with an image URL
       const findingsWithUrls = await Promise.all(data.map(async (finding) => {
-
-        const mktest = finding.image_url.split('/').pop() || '';
-
-        console.log(mktest);
-        //console.log(finding.image_url);
-
-
-
-
-
-
-        if (mktest) {
-          const signedUrl = await fetchSignedUrl(mktest);
-          console.log(signedUrl)
+        if (finding.image_url) {
+          const imageUrl = finding.image_url.split(',')[0].trim(); // Get the first URL
+          const signedUrl = await fetchSignedUrl(imageUrl);
           return { ...finding, image_url: signedUrl };
         }
         return finding;
@@ -109,7 +83,6 @@ export default function HomeScreen() {
       <ScrollView contentContainerStyle={styles.tilesContainer}>
         {findings.map((finding, index) => (
           <View key={index} style={styles.tile}>
-            {/* Display image if available */}
             {finding.image_url && (
               <Image source={{ uri: finding.image_url }} style={styles.image} />
             )}
@@ -127,15 +100,16 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 10,
+    marginBottom:80,
   },
   tilesContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between', // Ensures tiles are evenly distributed
+    justifyContent: 'space-between',
   },
   tile: {
-    width: '48%', // Ensures each tile takes up approximately half the width
-    marginBottom: 10, // Space below each tile
+    width: '48%',
+    marginBottom: 10,
     backgroundColor: '#f0f0f0',
     padding: 10,
     borderRadius: 8,
@@ -143,13 +117,13 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 2, // For Android shadow
+    elevation: 2,
   },
   image: {
-    width: '100%', // Ensures the image fills the full width of the tile
-    height: 150, // Adjust the height of the image
+    width: '100%',
+    height: 150,
     borderRadius: 8,
-    marginBottom: 10, // Space between image and text
+    marginBottom: 10,
   },
   title: {
     fontWeight: 'bold',
