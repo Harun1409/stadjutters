@@ -28,7 +28,10 @@ global.Buffer = Buffer;
 LogBox.ignoreLogs([
   'VirtualizedLists should never be nested inside plain ScrollViews',
 ]);
-
+// Component: HomeScreen
+// This component serves as the main screen for adding a finding.
+// It includes functionality for uploading images, fetching categories/material types, 
+// determining location, and interacting with the database via Supabase.
 export default function HomeScreen() {
   const { session } = useSession();  // Assuming this provides session info (user ID)
   const [titlePlaatsen, onChangeTitle] = React.useState('');
@@ -47,6 +50,9 @@ export default function HomeScreen() {
   // LOCATION ------------------------------------------------
   const [userCoordinates, setUserCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
 
+  // Function: fetchUserLocation
+  // If the user selects "Street Finding," this function is triggered to fetch the user's current location.
+  // NOTE: Explicit permission is required from the user to access location data.
   const fetchUserLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -102,6 +108,9 @@ export default function HomeScreen() {
     id: number;
     description: string;
   }
+  // Function: retrieveCategories
+  // Responsible for fetching categories from the Supabase database.
+  // The fetched data is mapped into a usable format for the dropdown component.
   // Functie om categorieën op te halen van Supabase
   const retrieveCategories = async () => {
     const { data, error } = await supabase
@@ -134,6 +143,9 @@ export default function HomeScreen() {
     description: string;
   }
 
+  // Function: retrieveMaterialType
+  // Ensures the list of available material types is retrieved and 
+  // displayed correctly in the second dropdown. Works similarly to categories.
   // Functie om categorieën op te halen van Supabase
   const retrieveMaterialType = async () => {
     const { data, error } = await supabase
@@ -160,6 +172,10 @@ export default function HomeScreen() {
   }));
     //-----------------------------------------------
 
+  // Functions: pickImages and takePhoto
+  // pickImages: Allows the user to select images from their gallery (up to 3).
+  // takePhoto: Allows the user to take a photo with their camera.
+  // Both add the selected images to the state 'images'.
   // Functie om een afbeeldingen uit de galerij te kiezen
   const pickImages = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -210,7 +226,11 @@ export default function HomeScreen() {
     setImages(images.filter((image) => image !== uri));
   };
 
-    // Functie om de afbeelding naar Supabase te uploaden
+  // Function: uploadToDatabase
+  // Core function for uploading the finding (including title, description, category, material type, images, and location) to the Supabase database.
+  // Checks for required fields (title, description, category, etc.) beforehand.
+  // Processes multiple images and generates unique filenames for storage in Supabase Storage.
+  // Functie om de afbeelding naar Supabase te uploaden
   const uploadToDatabase = async () => {
     if (!titlePlaatsen) {
       alert('Geef een titel op om door te kunnen gaan');
@@ -228,9 +248,11 @@ export default function HomeScreen() {
       alert('Geef een materiaaltype op om door te kunnen gaan');
       return;
     }
-    if (!location) {
-      alert('Locatie toestemming is vereist voor straatvondsten');
-      return;
+    if (selectedFindingType == 'Straatvondst'){
+      if (!location) {
+        alert('Locatie toestemming is vereist voor straatvondsten');
+        return;
+      }
     }
     if (images.length === 0) {
       alert('Geen afbeeldingen geselecteerd');
@@ -306,6 +328,11 @@ export default function HomeScreen() {
 
       alert('Vondst succesvol geplaatst!');
       setImages([]);
+      onChangeTitle('');
+      onChangeDescription('');
+      setselectedFindingType('Huisvondst');
+      setValueCategory(null);
+      setValueMaterialType(null);
     } catch (error) {
       //console.error('Fout bij het uploaden van afbeeldingen:', error);
       alert('Fout bij het uploaden van vondst:');
@@ -441,7 +468,7 @@ export default function HomeScreen() {
             onPress={uploadToDatabase}
             disabled={uploading}
           >
-            <Text style={styles.buttonText}>{uploading ? 'Uploading...' : 'Plaatsen'}</Text>
+            <Text style={styles.buttonText}>{uploading ? 'Uploaden...' : 'Plaatsen'}</Text>
           </TouchableOpacity>
           
         </View>
