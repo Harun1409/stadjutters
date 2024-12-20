@@ -50,7 +50,7 @@ export default function ChatsScreen() {
                     is_read: chat.is_read,
                     unread_count: chat.unread_count || 0,
                     other_user_name:
-                        chat.other_user_name
+                        chat.other_user_name || "Onbekende gebruiker",
                 }));
 
                 // console.log('Formatted Chats:', formattedChats); // Controleer of namen worden gemapt
