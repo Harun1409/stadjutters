@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "UIBackgroundModes": ["remote-notification"],
+        "NSUserTrackingUsageDescription": "We gebruiken je gegevens om notificaties te sturen."
+      }
     },
     "android": {
       "adaptiveIcon": {

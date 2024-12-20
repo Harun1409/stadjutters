@@ -318,35 +318,6 @@ export default function ChatPage() {
                 style={styles.chatList}
                 contentContainerStyle={{ paddingBottom: 10 }}
             />
-            {/*<FlatList*/}
-            {/*    data={messages}*/}
-            {/*    keyExtractor={(item, index) => (item.id ? item.id.toString() : `temp-${index}`)}*/}
-            {/*    renderItem={({item}) => (*/}
-            {/*        <View*/}
-            {/*            style={[*/}
-            {/*                styles.messageBubble,*/}
-            {/*                item.sender_id === session?.user?.id ? styles.sentMessage : styles.receivedMessage,*/}
-            {/*            ]}*/}
-            {/*        >*/}
-            {/*            <Text style={styles.messageText}>{item.message_content}</Text>*/}
-            {/*            <View style={styles.infoContainer}>*/}
-            {/*                <Text style={styles.timestamp}>*/}
-            {/*                    {new Date(item.created_at).toLocaleTimeString()}*/}
-            {/*                </Text>*/}
-            {/*                {item.sender_id === session?.user?.id && (*/}
-            {/*                    <Icon*/}
-            {/*                        name={"check-all"}*/}
-            {/*                        size={18}*/}
-            {/*                        color={item.is_read ? "#007AFF" : "#A9A9A9"} // Blauw als gelezen, grijs als niet gelezen*/}
-            {/*                        style={styles.vinkjesIcon}*/}
-            {/*                    />*/}
-            {/*                )}*/}
-            {/*            </View>*/}
-            {/*        </View>*/}
-            {/*    )}*/}
-            {/*    style={styles.chatList}*/}
-            {/*    contentContainerStyle={{paddingBottom: 10}}*/}
-            {/*/>*/}
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.textInput}

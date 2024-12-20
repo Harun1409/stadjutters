@@ -60,7 +60,8 @@
     "react-native-webview": "^13.12.5",
     "react-switch-selector": "^2.3.0",
     "twrnc": "^4.6.0",
-    "expo-location": "~18.0.4"
+    "expo-location": "~18.0.4",
+    "expo-notifications": "~0.29.11"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
