@@ -229,7 +229,7 @@ export default function HomeScreen() {
       return;
     }
     if (!location) {
-      alert('Locatie toestemming is vereist voor straatvondsten,');
+      alert('Locatie toestemming is vereist voor straatvondsten');
       return;
     }
     if (images.length === 0) {
@@ -304,11 +304,11 @@ export default function HomeScreen() {
 
       if (dbError) throw dbError;
 
-      alert('Afbeeldingen geüpload en succesvol opgeslagen!');
+      alert('Vondst succesvol geplaatst!');
       setImages([]);
     } catch (error) {
       //console.error('Fout bij het uploaden van afbeeldingen:', error);
-      alert('Fout bij het uploaden van afbeeldingen:');
+      alert('Fout bij het uploaden van vondst:');
     } finally {
       setUploading(false);
     }
