@@ -34,8 +34,10 @@ LogBox.ignoreLogs([
 // determining location, and interacting with the database via Supabase.
 export default function HomeScreen() {
   const { session } = useSession();  // Assuming this provides session info (user ID)
-  const [titlePlaatsen, onChangeTitle] = React.useState('');
-  const [descriptionPlaatsen, onChangeDescription] = React.useState('');
+  const [titlePlaatsen, setTitlePlaatsen] = useState('');
+  const [descriptionPlaatsen, setDescriptionPlaatsen] = useState('');
+  const maxTitleLength = 50;
+  const maxDescriptionLength = 500;
   const [images, setImages] = useState<string[]>([]); // Array to hold multiple image URIs
   const [uploading, setUploading] = useState(false); // Uploading state
   const [openCategory, setOpenCategory] = useState(false);
@@ -46,7 +48,17 @@ export default function HomeScreen() {
   const [materialTypes, setmaterialTypes] = useState<MaterialType[]>([]); // Typen van de materialTypes array als MaterialType[]
   const [selectedFindingType, setselectedFindingType] = useState('Huisvondst'); // State voor de geselecteerde segmentoptie (First of Second)
 
+  const onChangeTitle = (text: string) => {
+    if (text.length <= maxTitleLength) {
+      setTitlePlaatsen(text);
+    }
+  };
 
+  const onChangeDescription = (text: string) => {
+    if (text.length <= maxDescriptionLength) {
+      setDescriptionPlaatsen(text);
+    }
+  };
   // LOCATION ------------------------------------------------
   const [userCoordinates, setUserCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
 
@@ -265,7 +277,9 @@ export default function HomeScreen() {
       const urls: string[] = [];
       for (const image of images) {
         const fileName = image.split('/').pop();
+        console.log(image)
         const fileExt = fileName?.split('.').pop() || 'jpeg';
+        //const filePath = `public/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExt}`;
         const filePath = `public/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExt}`;
 
         const fileContent = await FileSystem.readAsStringAsync(image, {
@@ -340,25 +354,38 @@ export default function HomeScreen() {
       setUploading(false);
     }
   };
+  
 
   return (
     <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
       <ScrollView style={{backgroundColor: 'white'}}>
         <View style={styles.kikker}>
-          <TextInput
-            style={styles.input}
-            onChangeText={onChangeTitle}
-            value={titlePlaatsen}
-            placeholder="Titel"
-          />
-          <TextInput
-            editable
-            multiline
-            style={styles.inputDescription}
-            onChangeText={onChangeDescription}
-            value={descriptionPlaatsen}
-            placeholder="Beschrijving"
-          />
+        <View style={styles.inputContainer}>
+        <TextInput
+          style={styles.input}
+          onChangeText={onChangeTitle}
+          value={titlePlaatsen}
+          placeholder="Titel"
+        />
+        <Text style={styles.counter}>
+          {titlePlaatsen.length}/{maxTitleLength}
+        </Text>
+      </View>
+
+      {/* Description Input */}
+      <View style={styles.inputContainer}>
+        <TextInput
+          editable
+          multiline
+          style={[styles.input, styles.inputDescription]}
+          onChangeText={onChangeDescription}
+          value={descriptionPlaatsen}
+          placeholder="Beschrijving"
+        />
+        <Text style={styles.counter}>
+          {descriptionPlaatsen.length}/{maxDescriptionLength}
+        </Text>
+      </View>
           <View style={styles.dropDownStyle}>
           <View style={styles.dropDownContainer}>
             <DropDownSelect
@@ -487,19 +514,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   input: {
-    margin: 12,
+    height: 40,
+    borderColor: 'lightgray',
     borderWidth: 0.5,
-    width: '85%',
-    padding: 10,
-    borderColor: 'lightgray'
+    paddingHorizontal: 8,
+    paddingRight: 40, // Add padding to avoid overlapping the counter
+    borderRadius: 5, 
   },
   inputDescription: {
-    margin: 12,
-    borderWidth: 0.5,
-    width: '85%',
-    height: 80,
-    padding: 10,
-    borderColor: 'lightgray'
+    height: 100,
+    textAlignVertical: 'top', // Ensures text starts at the top in multiline inputs
   },
   imageContainer: {
     marginTop: 0,
@@ -605,5 +629,21 @@ const styles = StyleSheet.create({
   },
   customButtonDisabled: {
     backgroundColor: 'gray',
+  },
+  counter: {
+    position: 'absolute', // Positions the counter within the input container
+    right: 15, // Aligns the counter to the right edge
+    top: 15, // Adjusts vertical alignment (fine-tune for aesthetics)
+    fontSize: 12,
+    color: 'gray',
+  },
+  inputContainer: {
+    position: 'relative', // Enables absolute positioning for the counter
+    marginBottom: 0,
+    margin: 12,
+    borderWidth: 0,
+    width: '90%',
+    padding: 10,
+    borderColor: 'lightgray'
   },
 });
