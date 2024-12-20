@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Platform, View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Tabs } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
 import { HapticTab } from '@/components/HapticTab';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import Menu from '../menu';
@@ -10,10 +11,9 @@ export default function TabLayout() {
     const [menuVisible, setMenuVisible] = useState(false);
 
     const openMenu = () => setMenuVisible(true);
-
     const closeMenu = () => setMenuVisible(false);
 
-    const tabScreenOptions = {
+    const commonScreenOptions: BottomTabNavigationOptions = {
         headerStyle: {
             backgroundColor: 'whitesmoke',
             borderBottomWidth: 1,
@@ -40,7 +40,7 @@ export default function TabLayout() {
             {/* Tabs Configuratie */}
             <Tabs
                 screenOptions={{
-                    ...tabScreenOptions,
+                    ...commonScreenOptions,
                     headerTitleAlign: 'center',
                     headerRight: () => (
                         <Icon
