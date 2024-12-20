@@ -16,6 +16,7 @@ import {usePathname} from 'expo-router';
 import {supabase} from '@/lib/supabase';
 import {Session} from '@supabase/supabase-js';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { useNavigation } from '@react-navigation/native';
 
 // Functie om berichten op te halen tussen de huidige gebruiker en chatpartner
 const fetchMessages = async (userId: string, chatPartnerId: string) => {
@@ -63,7 +64,18 @@ export default function ChatPage() {
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [reportReason, setReportReason] = useState('');
+
+    const navigation = useNavigation(); // Gebruik de navigation-hook
     const [receiverName, setReceiverName] = useState<string | null>(null);
+
+    // Naam van de chat wordt weergegeven als de naam van de andere persoon
+    useEffect(() => {
+        if (receiverName) {
+            navigation.setOptions({
+                headerTitle: receiverName || "Chat",
+            });
+        }
+    }, [receiverName]);
 
     // Sessie ophalen
     useEffect(() => {
