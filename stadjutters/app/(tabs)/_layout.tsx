@@ -1,97 +1,122 @@
-import React, { useState } from 'react';
-import { Platform, View, StyleSheet, TouchableOpacity } from 'react-native';
-import { Tabs } from 'expo-router';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
-import { HapticTab } from '@/components/HapticTab';
+import {Tabs} from 'expo-router';
+import React, {useState} from 'react';
+import {Platform, View, StyleSheet, TouchableOpacity} from 'react-native';
+import {HapticTab} from '@/components/HapticTab';
+import {IconSymbol} from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
+import {Colors} from '@/constants/Colors';
+import {useColorScheme} from '@/hooks/useColorScheme';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Menu from '../menu';
 
+
 export default function TabLayout() {
+    const colorScheme = useColorScheme();
     const [menuVisible, setMenuVisible] = useState(false);
 
-    const openMenu = () => setMenuVisible(true);
-    const closeMenu = () => setMenuVisible(false);
+    const openMenu = () => {
+        setMenuVisible(true);
+    };
 
-    const commonScreenOptions: BottomTabNavigationOptions = {
-        headerStyle: {
-            backgroundColor: 'whitesmoke',
-            borderBottomWidth: 1,
-            borderBottomColor: 'lightgray',
-        },
-        tabBarActiveTintColor: '#7A3038',
-        tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
-        tabBarStyle: Platform.select({
-            ios: { position: 'absolute' },
-            default: {},
-        }),
+    const closeMenu = () => {
+        setMenuVisible(false);
     };
 
     return (
         <View style={styles.container}>
-            {/* Overlay voor het menu */}
             {menuVisible && (
                 <View style={styles.overlay}>
-                    <TouchableOpacity style={styles.overlayTouchable} onPress={closeMenu} />
-                    <Menu visible={menuVisible} closeMenu={closeMenu} />
+                    <TouchableOpacity style={styles.overlayTouchable} onPress={closeMenu}/>
+                    <Menu visible={menuVisible} closeMenu={closeMenu}/>
                 </View>
             )}
-            {/* Tabs Configuratie */}
+            {!menuVisible && <Menu visible={menuVisible} closeMenu={closeMenu}/>}
             <Tabs
                 screenOptions={{
-                    ...commonScreenOptions,
+                    tabBarActiveTintColor: '#7A3038',
+                    headerShown: true,
                     headerTitleAlign: 'center',
+                    tabBarButton: HapticTab,
+                    tabBarBackground: TabBarBackground,
+                    tabBarStyle: Platform.select({
+                        ios: {
+                            position: 'absolute',
+                        },
+                        default: {},
+                    }),
                     headerRight: () => (
                         <Icon
-                            name="account"
-                            size={28}
-                            color="#7A3038"
-                            style={styles.headerIcon}
+                            size={28} name="account"
                             onPress={openMenu}
-                        />
+                            style={{color: '#7A3038', marginRight: 10}}/>
                     ),
                 }}
             >
-                {[
-                    {
-                        name: 'index',
+                <Tabs.Screen
+                    name="index"
+                    options={{
                         title: 'Home',
-                        icon: 'home',
-                    },
-                    {
-                        name: 'vondsten',
+                        headerTitle: 'Home',
+                        headerStyle: {
+                            backgroundColor: 'whitesmoke', // Background color of the header
+                            borderBottomWidth: 1, // Add top border width
+                            borderBottomColor: 'lightgray', // Specify the border color
+                        },
+                        tabBarIcon: ({color}) => <Icon size={28} name="home" color={color}/>,
+                    }}
+                />
+                <Tabs.Screen
+                    name="vondsten"
+                    options={{
                         title: 'Vondsten',
-                        icon: 'map-marker',
-                    },
-                    {
-                        name: 'plaatsen',
+                        headerTitle: 'Vondsten',
+                        headerStyle: {
+                            backgroundColor: 'whitesmoke', // Background color of the header
+                            borderBottomWidth: 1, // Add top border width
+                            borderBottomColor: 'lightgray', // Specify the border color
+                        },
+                        tabBarIcon: ({color}) => <Icon size={28} name="map-marker" color={color}/>,
+                    }}
+                />
+                <Tabs.Screen
+                    name="plaatsen"
+                    options={{
                         title: 'Plaatsen',
-                        icon: 'plus',
-                    },
-                    {
-                        name: 'chats',
+                        headerTitle: 'Plaatsen',
+                        headerStyle: {
+                            backgroundColor: 'whitesmoke', // Background color of the header
+                            borderBottomWidth: 1, // Add top border width
+                            borderBottomColor: 'lightgray', // Specify the border color
+                        },
+                        tabBarIcon: ({color}) => <Icon size={28} name="plus" color={color}/>,
+                    }}
+                />
+                <Tabs.Screen
+                    name="chats"
+                    options={{
                         title: 'Chats',
-                        icon: 'message',
-                    },
-                    {
-                        name: 'meldingen',
+                        headerTitle: 'Chats',
+                        headerStyle: {
+                            backgroundColor: 'whitesmoke', // Background color of the header
+                            borderBottomWidth: 1, // Add top border width
+                            borderBottomColor: 'lightgray', // Specify the border color
+                        },
+                        tabBarIcon: ({color}) => <Icon size={28} name="message" color={color}/>,
+                    }}
+                />
+                <Tabs.Screen
+                    name="meldingen"
+                    options={{
                         title: 'Meldingen',
-                        icon: 'bell',
-                    },
-                ].map((tab) => (
-                    <Tabs.Screen
-                        key={tab.name}
-                        name={tab.name}
-                        options={{
-                            title: tab.title,
-                            headerTitle: tab.title,
-                            tabBarIcon: ({ color }) => (
-                                <Icon name={tab.icon} size={28} color={color} />
-                            ),
-                        }}
-                    />
-                ))}
+                        headerTitle: 'Meldingen',
+                        headerStyle: {
+                            backgroundColor: 'whitesmoke', // Background color of the header
+                            borderBottomWidth: 1, // Add top border width
+                            borderBottomColor: 'lightgray', // Specify the border color
+                        },
+                        tabBarIcon: ({color}) => <Icon size={28} name="bell" color={color}/>,
+                    }}
+                />
             </Tabs>
         </View>
     );
@@ -108,8 +133,5 @@ const styles = StyleSheet.create({
     },
     overlayTouchable: {
         ...StyleSheet.absoluteFillObject,
-    },
-    headerIcon: {
-        marginRight: 10,
     },
 });

@@ -10,22 +10,21 @@ import {
     Platform,
     Modal,
     Alert,
-    Image, SectionList,
+    Image,
 } from 'react-native';
-import {usePathname} from 'expo-router';
-import {supabase} from '@/lib/supabase';
-import {Session} from '@supabase/supabase-js';
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { usePathname } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
+import uuid from "expo-modules-core/src/uuid";
 
-// Functie om berichten op te halen tussen de huidige gebruiker en chatpartner
 const fetchMessages = async (userId: string, chatPartnerId: string) => {
-    const {data, error} = await supabase
+    const { data, error } = await supabase
         .from('chatmessage')
         .select('*')
         .or(
             `and(sender_id.eq.${userId},receiver_id.eq.${chatPartnerId}),and(sender_id.eq.${chatPartnerId},receiver_id.eq.${userId})`
         )
-        .order('created_at', {ascending: true});
+        .order('created_at', { ascending: true });
 
     if (error) {
         console.error('Error fetching messages:', error);
@@ -35,9 +34,34 @@ const fetchMessages = async (userId: string, chatPartnerId: string) => {
     return data;
 };
 
-// Functie om een chat te reporten
-const reportMessage = async (reportsUser: string, reportReason: string) => {
-    const {data, error} = await supabase
+const sendMessageToBackend = async (
+    senderId: string,
+    receiverId: string,
+    messageContent: string
+) => {
+    const { data, error } = await supabase
+        .from('chatmessage')
+        .insert([
+            {
+                sender_id: senderId,
+                receiver_id: receiverId,
+                message_content: messageContent,
+                is_read: false,
+                created_at: new Date().toISOString(),
+            },
+        ])
+        .single();
+
+    if (error) {
+        console.error('Error sending message:', error);
+        return null;
+    }
+
+    return data;
+};
+
+const insertReportedMessage = async (reportsUser: string, reportReason: string) => {
+    const { data, error } = await supabase
         .from('reportedMessages')
         .insert([
             {
@@ -59,13 +83,15 @@ export default function ChatPage() {
     const receiverId = pathname.split('/').pop();
     const [session, setSession] = useState<Session | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
+    useEffect(() => {
+        console.log('Messages:', messages); // Bekijk alle berichten in de state
+    }, [messages]);
     const [inputMessage, setInputMessage] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [reportReason, setReportReason] = useState('');
-    const [receiverName, setReceiverName] = useState<string | null>(null);
 
-    // Sessie ophalen
+    // Fetch the logged-in user's session
     useEffect(() => {
         const fetchSession = async () => {
             const {data} = await supabase.auth.getSession();
@@ -83,37 +109,15 @@ export default function ChatPage() {
         };
     }, []);
 
-    // Naam andere chatgebruiker ophalen
-    useEffect(() => {
-        const fetchReceiverName = async () => {
-            if (receiverId) {
-                const { data, error } = await supabase
-                    .from("profiles")
-                    .select("username")
-                    .eq("id", receiverId)
-                    .single();
-
-                if (error) {
-                    console.error("Error fetching receiver name:", error);
-                } else {
-                    setReceiverName(data?.username || "Onbekende gebruiker");
-                }
-            }
-        };
-
-        fetchReceiverName();
-    }, [receiverId]);
-
-    // Berichten ophalen en markeren als gelezen
     useEffect(() => {
         const loadMessages = async () => {
             if (session?.user?.id && receiverId) {
                 const fetchedMessages = await fetchMessages(session.user.id, receiverId);
 
-                // console.log('Fetched messages:', fetchedMessages); // Log alle berichten
+                console.log('Fetched messages:', fetchedMessages); // Log alle berichten
                 setMessages(fetchedMessages);
 
-                // Alle ontvangen berichten markeren als gelezen
+                // Mark all received messages as read
                 await markMessagesAsRead(receiverId, session.user.id);
 
                 setLoading(false);
@@ -129,17 +133,15 @@ export default function ChatPage() {
             .update({is_read: true})
             .eq('receiver_id', userId)
             .eq('sender_id', receiverId)
-        // .select('*');
+            .select('*'); // Ensure the updated rows are returned
 
         if (error) {
             console.error('Error updating is_read:', error);
+        } else {
+            console.log('Updated messages to read:', data);
         }
-        // else {
-        //     console.log('Updated messages to read:', data);
-        // }
     };
 
-    // Berichten updaten in real-time
     useEffect(() => {
         const setupRealTime = async () => {
             if (!session?.user?.id || !receiverId) return;
@@ -157,21 +159,23 @@ export default function ChatPage() {
                     (payload) => {
                         const newMessage = payload.new;
                         setMessages((prevMessages) => [...prevMessages, newMessage]);
-                        // console.log('Realtime update:', payload);
-                        //
-                        // if (payload.eventType === 'UPDATE') {
-                        //     const updatedMessage = payload.new;
-                        //
-                        //     setMessages((prevMessages) =>
-                        //         prevMessages.map((msg) =>
-                        //             msg.id === updatedMessage.id
-                        //                 ? {...msg, is_read: updatedMessage.is_read}
-                        //                 : msg
-                        //         )
-                        //     );
-                        // }
+                        console.log('Realtime update:', payload);
+
+                        if (payload.eventType === 'UPDATE') {
+                            const updatedMessage = payload.new;
+
+                            setMessages((prevMessages) =>
+                                prevMessages.map((msg) =>
+                                    msg.id === updatedMessage.id
+                                        ? {...msg, is_read: updatedMessage.is_read}
+                                        : msg
+                                )
+                            );
+                        }
 
                         if (payload.eventType === 'INSERT') {
+                            const newMessage = payload.new;
+
                             setMessages((prevMessages) => [...prevMessages, newMessage]);
                         }
                     }
@@ -186,7 +190,6 @@ export default function ChatPage() {
         setupRealTime();
     }, [session?.user?.id, receiverId]);
 
-    // Bericht versturen
     const handleSendMessage = async () => {
         if (!inputMessage.trim() || !session?.user?.id || !receiverId) return;
 
@@ -200,9 +203,10 @@ export default function ChatPage() {
 
         // Voeg het bericht direct toe aan de lokale staat
         setMessages((prev) => [...prev, newMessage]);
-        const {data, error} = await supabase.from('chatmessage').insert([newMessage]).select('*').single();
 
-        // console.log('Inserted Message Response:', data); // Debug: Bekijk de geretourneerde data
+        const { data, error } = await supabase.from('chatmessage').insert([newMessage]).select('*').single();
+
+        console.log('Inserted Message Response:', data); // Debug: Bekijk de geretourneerde data
         if (error) {
             console.error('Error sending message:', error);
             // Verwijder lokaal toegevoegd bericht als het invoegen mislukt
@@ -216,40 +220,38 @@ export default function ChatPage() {
         setModalVisible(true);
     };
 
-
-    // Indienen van een rapport
     const handleReportSubmit = async () => {
+        try {
+            // Haal de ingelogde gebruiker-ID op via Supabase auth
+            const {
+                data: { user },
+                error: userError,
+            } = await supabase.auth.getUser();
+
+            if (userError || !user) {
+                console.error('Gebruiker niet ingelogd:', userError);
+                alert('Je moet ingelogd zijn om een beoordeling te plaatsen.');
+                return;
+            }
+
+
         if (!reportReason.trim() || !session?.user?.id) {
-            Alert.alert('Error', 'Geef een reden voor je rapport.');
+            Alert.alert('Error', 'Please provide a report reason.');
             return;
         }
 
-        await reportMessage(session.user.id, reportReason);
+        await insertReportedMessage(session.user.id, reportReason);
         setModalVisible(false);
         setReportReason('');
-        Alert.alert('Succes', 'Gebruiker succesvol gerapporteerd.');
-    };
-
-    // Functie om berichten te groeperen op datum
-    const groupMessagesByDate = (messages: any[]) => {
-        return messages.reduce((groups: Record<string, any[]>, message) => {
-            const date = new Date(message.created_at).toLocaleDateString("nl-NL", {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-            });
-            if (!groups[date]) {
-                groups[date] = [];
-            }
-            groups[date].push(message);
-            return groups;
-        }, {});
-    };
+        Alert.alert('Success', 'User has been successfully reported.');
+    } catch (error){
+        console.error('Error reporting user:', error);}
+    }
 
     if (!receiverId) {
         return (
             <View style={styles.container}>
-                <Text>Geen Chat-ID opgegeven</Text>
+                <Text>No chat ID provided</Text>
             </View>
         );
     }
@@ -257,7 +259,7 @@ export default function ChatPage() {
     if (loading) {
         return (
             <View style={styles.container}>
-                <Text>Berichten laden...</Text>
+                <Text>Loading...</Text>
             </View>
         );
     }
@@ -268,49 +270,32 @@ export default function ChatPage() {
             behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
             <View style={styles.header}>
-                {/* Report chat knop */}
                 <TouchableOpacity style={styles.reportButton} onPress={handleReport}>
-                    <Icon size={25} name="flag-outline" color="#000000"/>
-                    <Text style={styles.reportText}>Chat rapporteren</Text>
+                    <Image
+                        // source={require('C:\\Users\\Gebruiker\\WebstormProjects\\stadjutters\\stadjutters\\assets\\images\\report-icon.jpg')}
+                        style={styles.reportIcon}
+                    />
                 </TouchableOpacity>
             </View>
-            <SectionList
-                sections={Object.entries(groupMessagesByDate(messages)).map(
-                    ([date, messages]) => ({
-                        title: date,
-                        data: messages,
-                    })
-                )}
-                keyExtractor={(item, index) => item.id || `temp-${index}`}
-                renderSectionHeader={({ section: { title } }) => (
-                    <View style={styles.dateHeader}>
-                        <Text style={styles.dateHeaderText}>{title}</Text>
-                    </View>
-                )}
+            <FlatList
+                data={messages}
+                keyExtractor={(item, index) => (item.id ? item.id.toString() : `temp-${index}`)}
                 renderItem={({ item }) => (
                     <View
                         style={[
                             styles.messageBubble,
-                            item.sender_id === session?.user?.id
-                                ? styles.sentMessage
-                                : styles.receivedMessage,
+                            item.sender_id === session?.user?.id ? styles.sentMessage : styles.receivedMessage,
                         ]}
                     >
                         <Text style={styles.messageText}>{item.message_content}</Text>
                         <View style={styles.infoContainer}>
                             <Text style={styles.timestamp}>
-                                {new Intl.DateTimeFormat("nl-NL", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                }).format(new Date(item.created_at))}
+                                {new Date(item.created_at).toLocaleTimeString()}
                             </Text>
                             {item.sender_id === session?.user?.id && (
-                                <Icon
-                                    name={"check-all"}
-                                    size={18}
-                                    color={item.is_read ? "#007AFF" : "#A9A9A9"}
-                                    style={styles.vinkjesIcon}
-                                />
+                                <Text style={styles.vinkjes}>
+                                    {item.is_read ? '✔️✔️' : '✔️'}
+                                </Text>
                             )}
                         </View>
                     </View>
@@ -323,10 +308,10 @@ export default function ChatPage() {
                     style={styles.textInput}
                     value={inputMessage}
                     onChangeText={setInputMessage}
-                    placeholder="Typ een bericht..."
+                    placeholder="Type a message..."
                 />
                 <TouchableOpacity style={styles.sendButton} onPress={handleSendMessage}>
-                    <Text style={styles.sendButtonText}>Versturen</Text>
+                    <Text style={styles.sendButtonText}>Send</Text>
                 </TouchableOpacity>
             </View>
             <Modal
@@ -338,25 +323,25 @@ export default function ChatPage() {
                 }}
             >
                 <View style={styles.modalView}>
-                    <Text style={styles.modalText}>Chat rapporteren</Text>
+                    <Text style={styles.modalText}>Report Reason</Text>
                     <TextInput
                         style={styles.modalTextInput}
                         value={reportReason}
                         onChangeText={setReportReason}
-                        placeholder="Voer de reden in..."
+                        placeholder="Wat is de reden van je report?"
                     />
                     <View style={styles.modalButtons}>
                         <TouchableOpacity
                             style={[styles.button, styles.buttonClose]}
                             onPress={() => setModalVisible(!modalVisible)}
                         >
-                            <Text style={styles.textStyleCancelButton}>Annuleren</Text>
+                            <Text style={styles.textStyle}>Cancel</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
                             style={[styles.button, styles.buttonSubmit]}
                             onPress={handleReportSubmit}
                         >
-                            <Text style={styles.textStyle}>Verzenden</Text>
+                            <Text style={styles.textStyle}>Submit</Text>
                         </TouchableOpacity>
                     </View>
                 </View>
@@ -451,23 +436,15 @@ const styles = StyleSheet.create({
         color: '#555',
         marginLeft: 8,
     },
-
     reportButton: {
-        flexDirection: 'row',
-        alignItems: 'center',
         padding: 10,
         borderRadius: 5,
-    },
-    reportText: {
-        fontSize: 16,
-        color: '#000',
-        marginLeft: 8,
+        alignSelf: 'center',
     },
     reportIcon: {
         width: 24,
         height: 24,
     },
-
     modalView: {
         margin: 20,
         backgroundColor: 'white',
@@ -509,10 +486,7 @@ const styles = StyleSheet.create({
         elevation: 2,
     },
     buttonClose: {
-        // backgroundColor: '#f44336',
-        backgroundColor: 'white',
-        borderColor: '#f44336',
-        borderWidth: 1,
+        backgroundColor: '#f44336',
     },
     buttonSubmit: {
         backgroundColor: '#2196F3',
@@ -521,29 +495,5 @@ const styles = StyleSheet.create({
         color: 'white',
         fontWeight: 'bold',
         textAlign: 'center',
-    },
-    textStyleCancelButton: {
-        color: '#f44336',
-        fontWeight: 'bold',
-        textAlign: 'center',
-    },
-    menuIcon: {
-        marginRight: 2,
-    },
-    vinkjesIcon: {
-        marginLeft: 5,
-    },
-    dateHeader: {
-        backgroundColor: "#F1F1F1",
-        paddingVertical: 5,
-        paddingHorizontal: 10,
-        borderRadius: 5,
-        alignSelf: "center",
-        marginVertical: 10,
-    },
-    dateHeaderText: {
-        fontSize: 14,
-        color: "#555",
-        fontWeight: "bold",
     },
 });
