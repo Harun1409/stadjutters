@@ -8,8 +8,6 @@ export default function HomeScreen() {
   return (
     <View style={styles.kikker}>
       <ThemedText>Home</ThemedText>
-      {/*<Link href="/explore" style={{ color: 'blue'}}>explore</Link>*/}
-      {/*<Link href="/login" style={{ color: 'blue'}}>login</Link>*/}
     </View>
   );
 }

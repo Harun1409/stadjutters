@@ -10,13 +10,12 @@ import {
     Platform,
     Modal,
     Alert,
-    Image,
+    Image, SectionList,
 } from 'react-native';
 import {usePathname} from 'expo-router';
 import {supabase} from '@/lib/supabase';
 import {Session} from '@supabase/supabase-js';
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-
 
 // Functie om berichten op te halen tussen de huidige gebruiker en chatpartner
 const fetchMessages = async (userId: string, chatPartnerId: string) => {
@@ -35,33 +34,6 @@ const fetchMessages = async (userId: string, chatPartnerId: string) => {
 
     return data;
 };
-
-
-// const sendMessageToBackend = async (
-//     senderId: string,
-//     receiverId: string,
-//     messageContent: string
-// ) => {
-//     const {data, error} = await supabase
-//         .from('chatmessage')
-//         .insert([
-//             {
-//                 sender_id: senderId,
-//                 receiver_id: receiverId,
-//                 message_content: messageContent,
-//                 is_read: false,
-//                 created_at: new Date().toISOString(),
-//             },
-//         ])
-//         .single();
-//
-//     if (error) {
-//         console.error('Error sending message:', error);
-//         return null;
-//     }
-//
-//     return data;
-// };
 
 // Functie om een chat te reporten
 const reportMessage = async (reportsUser: string, reportReason: string) => {
@@ -87,13 +59,11 @@ export default function ChatPage() {
     const receiverId = pathname.split('/').pop();
     const [session, setSession] = useState<Session | null>(null);
     const [messages, setMessages] = useState<any[]>([]);
-    // useEffect(() => {
-    //     console.log('Messages:', messages); // Bekijk alle berichten in de state
-    // }, [messages]);
     const [inputMessage, setInputMessage] = useState<string>('');
     const [loading, setLoading] = useState(true);
     const [modalVisible, setModalVisible] = useState(false);
     const [reportReason, setReportReason] = useState('');
+    const [receiverName, setReceiverName] = useState<string | null>(null);
 
     // Sessie ophalen
     useEffect(() => {
@@ -112,6 +82,27 @@ export default function ChatPage() {
             listener?.subscription.unsubscribe();
         };
     }, []);
+
+    // Naam andere chatgebruiker ophalen
+    useEffect(() => {
+        const fetchReceiverName = async () => {
+            if (receiverId) {
+                const { data, error } = await supabase
+                    .from("profiles")
+                    .select("username")
+                    .eq("id", receiverId)
+                    .single();
+
+                if (error) {
+                    console.error("Error fetching receiver name:", error);
+                } else {
+                    setReceiverName(data?.username || "Onbekende gebruiker");
+                }
+            }
+        };
+
+        fetchReceiverName();
+    }, [receiverId]);
 
     // Berichten ophalen en markeren als gelezen
     useEffect(() => {
@@ -138,7 +129,7 @@ export default function ChatPage() {
             .update({is_read: true})
             .eq('receiver_id', userId)
             .eq('sender_id', receiverId)
-        // .select('*'); // Ensure the updated rows are returned
+        // .select('*');
 
         if (error) {
             console.error('Error updating is_read:', error);
@@ -239,6 +230,22 @@ export default function ChatPage() {
         Alert.alert('Succes', 'Gebruiker succesvol gerapporteerd.');
     };
 
+    // Functie om berichten te groeperen op datum
+    const groupMessagesByDate = (messages: any[]) => {
+        return messages.reduce((groups: Record<string, any[]>, message) => {
+            const date = new Date(message.created_at).toLocaleDateString("nl-NL", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+            });
+            if (!groups[date]) {
+                groups[date] = [];
+            }
+            groups[date].push(message);
+            return groups;
+        }, {});
+    };
+
     if (!receiverId) {
         return (
             <View style={styles.container}>
@@ -267,32 +274,79 @@ export default function ChatPage() {
                     <Text style={styles.reportText}>Chat rapporteren</Text>
                 </TouchableOpacity>
             </View>
-            <FlatList
-                data={messages}
-                keyExtractor={(item, index) => (item.id ? item.id.toString() : `temp-${index}`)}
-                renderItem={({item}) => (
+            <SectionList
+                sections={Object.entries(groupMessagesByDate(messages)).map(
+                    ([date, messages]) => ({
+                        title: date,
+                        data: messages,
+                    })
+                )}
+                keyExtractor={(item, index) => item.id || `temp-${index}`}
+                renderSectionHeader={({ section: { title } }) => (
+                    <View style={styles.dateHeader}>
+                        <Text style={styles.dateHeaderText}>{title}</Text>
+                    </View>
+                )}
+                renderItem={({ item }) => (
                     <View
                         style={[
                             styles.messageBubble,
-                            item.sender_id === session?.user?.id ? styles.sentMessage : styles.receivedMessage,
+                            item.sender_id === session?.user?.id
+                                ? styles.sentMessage
+                                : styles.receivedMessage,
                         ]}
                     >
                         <Text style={styles.messageText}>{item.message_content}</Text>
                         <View style={styles.infoContainer}>
                             <Text style={styles.timestamp}>
-                                {new Date(item.created_at).toLocaleTimeString()}
+                                {new Intl.DateTimeFormat("nl-NL", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                }).format(new Date(item.created_at))}
                             </Text>
                             {item.sender_id === session?.user?.id && (
-                                <Text style={styles.vinkjes}>
-                                    {item.is_read ? '✔️✔️' : '✔️'}
-                                </Text>
+                                <Icon
+                                    name={"check-all"}
+                                    size={18}
+                                    color={item.is_read ? "#007AFF" : "#A9A9A9"}
+                                    style={styles.vinkjesIcon}
+                                />
                             )}
                         </View>
                     </View>
                 )}
                 style={styles.chatList}
-                contentContainerStyle={{paddingBottom: 10}}
+                contentContainerStyle={{ paddingBottom: 10 }}
             />
+            {/*<FlatList*/}
+            {/*    data={messages}*/}
+            {/*    keyExtractor={(item, index) => (item.id ? item.id.toString() : `temp-${index}`)}*/}
+            {/*    renderItem={({item}) => (*/}
+            {/*        <View*/}
+            {/*            style={[*/}
+            {/*                styles.messageBubble,*/}
+            {/*                item.sender_id === session?.user?.id ? styles.sentMessage : styles.receivedMessage,*/}
+            {/*            ]}*/}
+            {/*        >*/}
+            {/*            <Text style={styles.messageText}>{item.message_content}</Text>*/}
+            {/*            <View style={styles.infoContainer}>*/}
+            {/*                <Text style={styles.timestamp}>*/}
+            {/*                    {new Date(item.created_at).toLocaleTimeString()}*/}
+            {/*                </Text>*/}
+            {/*                {item.sender_id === session?.user?.id && (*/}
+            {/*                    <Icon*/}
+            {/*                        name={"check-all"}*/}
+            {/*                        size={18}*/}
+            {/*                        color={item.is_read ? "#007AFF" : "#A9A9A9"} // Blauw als gelezen, grijs als niet gelezen*/}
+            {/*                        style={styles.vinkjesIcon}*/}
+            {/*                    />*/}
+            {/*                )}*/}
+            {/*            </View>*/}
+            {/*        </View>*/}
+            {/*    )}*/}
+            {/*    style={styles.chatList}*/}
+            {/*    contentContainerStyle={{paddingBottom: 10}}*/}
+            {/*/>*/}
             <View style={styles.inputContainer}>
                 <TextInput
                     style={styles.textInput}
@@ -504,5 +558,21 @@ const styles = StyleSheet.create({
     },
     menuIcon: {
         marginRight: 2,
-    }
+    },
+    vinkjesIcon: {
+        marginLeft: 5,
+    },
+    dateHeader: {
+        backgroundColor: "#F1F1F1",
+        paddingVertical: 5,
+        paddingHorizontal: 10,
+        borderRadius: 5,
+        alignSelf: "center",
+        marginVertical: 10,
+    },
+    dateHeaderText: {
+        fontSize: 14,
+        color: "#555",
+        fontWeight: "bold",
+    },
 });

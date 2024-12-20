@@ -95,13 +95,21 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
                         {session ? (
                             <>
                                 <MenuItem icon="package" label="Mijn straat-/huisvondsten" route="/menuItems/mijnVondsten" />
+
                                 <View style={styles.menuDivider} />
+
                                 <MenuItem icon="star" label="Mijn beoordelingen" route="/menuItems/mijnBeoordelingen" />
+
                                 <View style={styles.menuDivider} />
+
                                 <MenuItem icon="bookmark" label="Opgeslagen vondsten" route="/menuItems/opgeslagenVondsten" />
+
                                 <View style={styles.menuDivider} />
+
                                 <MenuItem icon="cog" label="Instellingen" route="/menuItems/instellingen" />
+
                                 <View style={styles.menuDivider} />
+
                                 <MenuItem icon="account" label="Account" route="/login" />
                             </>
                         ) : (
