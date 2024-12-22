@@ -11,6 +11,7 @@ import { supabase } from '../../lib/supabase';
 import { Link } from 'expo-router';  // Use Link from expo-router
 
 interface Finding {
+  id: string; // Unique identifier
   title: string;
   stad: string;
   image_url: string | null;
@@ -22,7 +23,7 @@ const fetchFindings = async (page: number): Promise<Finding[]> => {
   try {
     const { data, error } = await supabase
       .from('findings')
-      .select('title, stad, image_url')
+      .select('id, title, stad, image_url')
       .eq('findingTypeId', 'Huisvondst') // Filter op 'Huisvondst'
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
@@ -121,7 +122,10 @@ export default function HomeScreen() {
         renderItem={({ item }) => (
           
           <View style={styles.tile} >
-            <Link href={`/weergaveVondst`}>
+            <Link href={{
+                pathname: '/weergaveVondst',
+                params: { id: item.id }, // Pass the unique identifier
+              }}>
             {item.image_url && (
               <Image source={{ uri: item.image_url }} style={styles.image} />
             )}
