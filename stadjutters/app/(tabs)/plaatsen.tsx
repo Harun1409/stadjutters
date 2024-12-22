@@ -359,84 +359,81 @@ export default function HomeScreen() {
   
 
   return (
-    <TouchableWithoutFeedback onPress={() => Keyboard.dismiss()}>
-      <ScrollView style={{backgroundColor: 'white'}}>
-        <View style={styles.kikker}>
-
-          
-        <View style={styles.inputContainer}>
-        <TextInput
-          style={styles.input}
-          onChangeText={onChangeTitle}
-          value={titlePlaatsen}
-          placeholder="Titel"
-        />
-        <Text style={styles.counter}>
-          {titlePlaatsen.length}/{maxTitleLength}
-        </Text>
-      </View>
-
-      {/* Description Input */}
-      <View style={styles.inputContainer}>
-        <TextInput
-          editable
-          multiline
-          style={[styles.input, styles.inputDescription]}
-          onChangeText={onChangeDescription}
-          value={descriptionPlaatsen}
-          placeholder="Beschrijving"
-        />
-        <Text style={styles.counter}>
-          {descriptionPlaatsen.length}/{maxDescriptionLength}
-        </Text>
-      </View>
+    <View style={styles.container}>
+      <ScrollView contentContainerStyle={styles.tilesContainer}>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              onChangeText={onChangeTitle}
+              value={titlePlaatsen}
+              placeholder="Titel"
+            />
+            <Text style={styles.counter}>
+              {titlePlaatsen.length}/{maxTitleLength}
+            </Text>
+          </View>
+  
+          {/* Description Input */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              editable
+              multiline
+              style={[styles.input, styles.inputDescription]}
+              onChangeText={onChangeDescription}
+              value={descriptionPlaatsen}
+              placeholder="Beschrijving"
+            />
+            <Text style={styles.counter}>
+              {descriptionPlaatsen.length}/{maxDescriptionLength}
+            </Text>
+          </View>
           <View style={styles.dropDownStyle}>
-          <View style={styles.dropDownContainer}>
-            <DropDownSelect
-              placeholder="Categorie"
-              toggle={() => setOpenCategory(!openCategory)} // Correct toggle logic
-              selectedData={valueCategory}
-              open={openCategory} // Use the correct state
-              data={categoryOptions} // Pass fetched category data
-              onSelect={(data) => {
-                setValueCategory(data); // Set selected category
-                setOpenCategory(false); // Close the dropdown
-              }}
-              dropDownContainerStyle={{
-                maxHeight: 140,
-                minWidth: 100,
-                borderWidth: 0.5,
-                borderColor: 'lightgray',
-                borderRadius: 8,
-                padding: 10,
-              }}
-              search
-            />
+            <View style={styles.dropDownContainer}>
+              <DropDownSelect
+                placeholder="Categorie"
+                toggle={() => setOpenCategory(!openCategory)}
+                selectedData={valueCategory}
+                open={openCategory}
+                data={categoryOptions}
+                onSelect={(data) => {
+                  setValueCategory(data);
+                  setOpenCategory(false);
+                }}
+                dropDownContainerStyle={{
+                  maxHeight: 130,
+                  minWidth: 100,
+                  borderWidth: 0.5,
+                  borderColor: 'lightgray',
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+                search
+              />
+            </View>
+            <View style={styles.dropDownContainer}>
+              <DropDownSelect
+                placeholder="Materiaaltype"
+                toggle={() => setOpenMaterialType(!openMaterialType)}
+                selectedData={valueMaterialType}
+                open={openMaterialType}
+                data={materialTypeOptions}
+                onSelect={(data) => {
+                  setValueMaterialType(data);
+                  setOpenMaterialType(false);
+                }}
+                dropDownContainerStyle={{
+                  maxHeight: 130,
+                  minWidth: 100,
+                  borderWidth: 0.5,
+                  borderColor: 'lightgray',
+                  borderRadius: 8,
+                  padding: 10,
+                }}
+                search
+              />
+            </View>
           </View>
-
-          <View style={styles.dropDownContainer}>
-            <DropDownSelect
-              placeholder="Materiaaltype"
-              toggle={() => setOpenMaterialType(!openMaterialType)}
-              selectedData={valueMaterialType}
-              open={openMaterialType}
-              data={materialTypeOptions} // Pass de opgehaalde categorieën
-              onSelect={(data) => {
-                setValueMaterialType(data); // Zet de geselecteerde categorie in de staat
-                setOpenMaterialType(false); // Sluit de dropdown
-              }}
-              dropDownContainerStyle={{
-                maxHeight: 140,
-                minWidth: 100,
-                borderWidth: 0.5,
-                borderColor: 'lightgray',
-                borderRadius: 8,
-                padding: 10,
-              }}
-              search
-            />
-          </View>
-        </View>
+  
           <View style={styles.segmentedControlWrapper}>
             <TouchableOpacity
               style={[
@@ -471,50 +468,62 @@ export default function HomeScreen() {
               </Text>
             </TouchableOpacity>
           </View>
+  
           <View style={styles.dropDownStyle}>
-          <View style={styles.dropDownContainer}>
-            <TouchableOpacity style={styles.customButton} onPress={pickImages}>
-              <Text style={styles.buttonText}>Foto uit gallerij</Text>
-            </TouchableOpacity>
+            <View style={styles.dropDownContainer}>
+              <TouchableOpacity style={styles.customButton} onPress={pickImages}>
+                <Text style={styles.buttonText}>Foto uit gallerij</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.dropDownContainer}>
+              <TouchableOpacity style={styles.customButton} onPress={takePhoto}>
+                <Text style={styles.buttonText}>Maak foto</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={styles.dropDownContainer}>
-            <TouchableOpacity style={styles.customButton} onPress={takePhoto}>
-              <Text style={styles.buttonText}>Maak foto</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-          
+  
           <View style={styles.imageContainer}>
             {images.map((uri, index) => (
               <View key={index} style={styles.imageWrapper}>
                 <Image source={{ uri }} style={styles.image} />
-                <TouchableOpacity onPress={() => removeImage(uri)} style={styles.removeButton}>
+                <TouchableOpacity
+                  onPress={() => removeImage(uri)}
+                  style={styles.removeButton}
+                >
                   <Text style={styles.removeButtonText}>X</Text>
                 </TouchableOpacity>
               </View>
             ))}
           </View>
-          <TouchableOpacity
-            style={[styles.customButtonPlaatsen, uploading && styles.customButtonDisabled]}
-            onPress={uploadToDatabase}
-            disabled={uploading}
-          >
-            <Text style={styles.buttonText}>{uploading ? 'Uploaden...' : 'Plaatsen'}</Text>
-          </TouchableOpacity>
-          
-        </View>
       </ScrollView>
-    </TouchableWithoutFeedback>
+      <View style={styles.bottomButtonContainer}>
+        <TouchableOpacity
+          style={[styles.customButtonPlaatsen, uploading && styles.customButtonDisabled]}
+          onPress={uploadToDatabase}
+          disabled={uploading}
+        >
+          <Text style={styles.buttonText}>
+            {uploading ? 'Uploaden...' : 'Plaatsen'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
+  
 }
 
 const styles = StyleSheet.create({
   // Your existing styles, plus:
-  kikker: {
-    display: 'flex',
+  container: {
     flex: 1,
     backgroundColor: '#fff',
+    padding: 10,
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  tilesContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
   },
   input: {
@@ -535,31 +544,40 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     marginBottom: 20,
+    width: '97%', 
+  },
+  imageWrapper: {
+    flexBasis: '31%', // Zorgt voor 3 kolommen (ongeveer 3x per rij)
+    margin: '1%', // Ruimte tussen de items
+    aspectRatio: 1, // Vierkante afbeelding
+    position: 'relative',
   },
   image: {
-    width: '100%', 
+    width: '100%',
     height: '100%',
-    borderRadius: 5, 
+    borderRadius: 5,
   },
   dropDownStyle: {
     flexDirection: 'row',
-    justifyContent: 'space-between', 
-    alignItems: 'flex-start', 
-    width: '88%',
+    width: '100%',
     marginVertical: 10, 
+    alignItems: 'center',
+    justifyContent: 'center'
   },
   dropDownContainer: {
-    flex: 1, 
     marginHorizontal: 5, 
+    width: '46%'
   },
   segmentedControlWrapper: {
-    width: '85%',
+    width: '95%',
     flexDirection: 'row',
     borderWidth: 1,
     borderColor: '#3498db',
     borderRadius: 5,
-    overflow: 'hidden',
     backgroundColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    
   },
   segmentButton: {
     flex: 1,
@@ -594,6 +612,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center', 
   },
+  bottomButtonContainer: {
+    position: 'absolute',
+    bottom: 5,
+    width: '95%', // Match the width of the button
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white', // Optional: to ensure the background is clear
+    paddingVertical: 10,
+  },
   customButtonPlaatsen: {
     backgroundColor: '#3498db',
     paddingVertical: 12,
@@ -602,18 +629,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     alignItems: 'center',
     justifyContent: 'center', 
-    width: '85%',
+    width: '100%',
   },
   buttonText: {
     color: 'white', 
     fontSize: 15, 
     fontWeight: 'bold', 
-  },
-  imageWrapper: {
-    position: 'relative',
-    margin: 5, 
-    width: 100, 
-    height: 100, 
   },
   removeButton: {
     position: 'absolute',
@@ -644,9 +665,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     position: 'relative', // Enables absolute positioning for the counter
     marginBottom: 0,
-    margin: 12,
+    margin: 0,
     borderWidth: 0,
-    width: '90%',
+    width: '100%',
     padding: 10,
     borderColor: 'lightgray'
   },
