@@ -24,48 +24,41 @@ import * as Location from 'expo-location';
 
 global.Buffer = Buffer;
 
-// Suppress the warning about VirtualizedLists (flatlists/drowpdownboxes have their own scrollview and can therefore not be wrapped in another scrollview.
-// if still done an error occurs but actually does no harm. below line suppresses the warning)
+// Suppress warnings about nested VirtualizedLists
 LogBox.ignoreLogs([
   'VirtualizedLists should never be nested inside plain ScrollViews',
 ]);
-// Component: HomeScreen
-// This component serves as the main screen for adding a finding.
-// It includes functionality for uploading images, fetching categories/material types, 
-// determining location, and interacting with the database via Supabase.
+
 export default function HomeScreen() {
-  const { session } = useSession();  // Assuming this provides session info (user ID)
+  const { session } = useSession(); // Assuming this provides session info (user ID)
   const [titlePlaatsen, setTitlePlaatsen] = useState('');
   const [descriptionPlaatsen, setDescriptionPlaatsen] = useState('');
-  const maxTitleLength = 50;
-  const maxDescriptionLength = 500;
   const [images, setImages] = useState<string[]>([]); // Array to hold multiple image URIs
   const [uploading, setUploading] = useState(false); // Uploading state
   const [openCategory, setOpenCategory] = useState(false);
-  const [valueCategory, setValueCategory] = useState<any>(null); // For storing the selected category
-  const [categories, setCategories] = useState<Category[]>([]);  // Typen van de categorieën array als Category[]
+  const [valueCategory, setValueCategory] = useState<any>(null); // Selected category
+  const [categories, setCategories] = useState<Category[]>([]);
   const [openMaterialType, setOpenMaterialType] = useState(false);
   const [valueMaterialType, setValueMaterialType] = useState<any>(null);
-  const [materialTypes, setmaterialTypes] = useState<MaterialType[]>([]); // Typen van de materialTypes array als MaterialType[]
-  const [selectedFindingType, setselectedFindingType] = useState('Huisvondst'); // State voor de geselecteerde segmentoptie (First of Second)
+  const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
+  const [selectedFindingType, setSelectedFindingType] = useState('Huisvondst');
+  const [userCoordinates, setUserCoordinates] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  const maxTitleLength = 50;
+  const maxDescriptionLength = 500;
 
   const onChangeTitle = (text: string) => {
-    if (text.length <= maxTitleLength) {
-      setTitlePlaatsen(text);
-    }
+    if (text.length <= maxTitleLength) setTitlePlaatsen(text);
   };
 
   const onChangeDescription = (text: string) => {
-    if (text.length <= maxDescriptionLength) {
-      setDescriptionPlaatsen(text);
-    }
+    if (text.length <= maxDescriptionLength) setDescriptionPlaatsen(text);
   };
-  // LOCATION ------------------------------------------------
-  const [userCoordinates, setUserCoordinates] = useState<{ latitude: number; longitude: number } | null>(null);
 
-  // Function: fetchUserLocation
-  // If the user selects "Street Finding," this function is triggered to fetch the user's current location.
-  // NOTE: Explicit permission is required from the user to access location data.
+  // Fetch user's location if "Straatvondst" is selected
   const fetchUserLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -78,41 +71,38 @@ export default function HomeScreen() {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       });
-      //console.log('User coordinates:', location.coords);
     } catch (error) {
-      console.error('Fout bij het ophalen van locatie:', error);
+      console.error('Error fetching location:', error);
       alert('Kon locatie niet ophalen.');
     }
   };
-  
+
   const handleStraatvondstSelection = () => {
-    setselectedFindingType('Straatvondst');
+    setSelectedFindingType('Straatvondst');
     fetchUserLocation();
   };
 
-  // Prepare location coordinates if applicable
   const location = userCoordinates
-  ? `(${userCoordinates.latitude}, ${userCoordinates.longitude})`
-  : null;
-  // END LOCATION --------------------------------------------
+    ? `(${userCoordinates.latitude}, ${userCoordinates.longitude})`
+    : null;
 
-  // Stad ophalen van profiles in schema public
+  // Fetch user's city from profile
   const getStadFromProfile = async () => {
     try {
       const { data, error } = await supabase
         .from('profiles')
         .select('stad')
-        .eq('id', session?.user.id) // Haalt stad op voor de ingelogde gebruiker
-        .single(); // Verwacht slechts één rij
+        .eq('id', session?.user.id)
+        .single();
 
       if (error) {
-        console.error('Fout bij het ophalen van stad:', error);
+        console.error('Error fetching city:', error);
         return null;
       }
 
-      return data.stad; // Geeft de stad terug
+      return data.stad;
     } catch (error) {
-      console.error('Onverwachte fout bij het ophalen van stad:', error);
+      console.error('Unexpected error fetching city:', error);
       return null;
     }
   };
@@ -121,75 +111,57 @@ export default function HomeScreen() {
     id: number;
     description: string;
   }
-  // Function: retrieveCategories
-  // Responsible for fetching categories from the Supabase database.
-  // The fetched data is mapped into a usable format for the dropdown component.
-  // Functie om categorieën op te halen van Supabase
+
+  // Retrieve categories from Supabase
   const retrieveCategories = async () => {
     const { data, error } = await supabase
       .from('category')
-      .select('id, description'); // Verkrijg de id en description kolommen
+      .select('id, description');
 
     if (error) {
-      console.error('Fout bij het ophalen van categorieën:', error);
+      console.error('Error fetching categories:', error);
       return;
     }
-    //console.log('categorieën:', data);  // Logs de opgehaalde categorieën
     setCategories(data || []);
   };
 
   useEffect(() => {
-    retrieveCategories(); // Haal categorieën op bij het laden van de component
+    retrieveCategories();
   }, []);
-
-    // Zet de categorieën om naar het formaat dat de dropdown verwacht
 
   const categoryOptions = categories.map((category) => ({
     id: category.id,
-    name: category.description, // Zet description om naar 'name'
+    name: category.description,
   }));
 
-  //-----------------------------------------------
-// Definieer een type voor de materialTypes
   interface MaterialType {
     id: number;
     description: string;
   }
 
-  // Function: retrieveMaterialType
-  // Ensures the list of available material types is retrieved and 
-  // displayed correctly in the second dropdown. Works similarly to categories.
-  // Functie om categorieën op te halen van Supabase
+  // Retrieve material types from Supabase
   const retrieveMaterialType = async () => {
     const { data, error } = await supabase
       .from('materialType')
-      .select('id, description'); // Verkrijg de id en description kolommen
+      .select('id, description');
 
     if (error) {
-      console.error('Fout bij het ophalen van materialTypes:', error);
+      console.error('Error fetching material types:', error);
       return;
     }
-
-    //console.log('MaterialTypes:', data);  // Logs de opgehaalde categorieën
-    setmaterialTypes(data || []); // Zet de categorieën in de staat
+    setMaterialTypes(data || []);
   };
 
   useEffect(() => {
-    retrieveMaterialType(); // Haal categorieën op bij het laden van de component
+    retrieveMaterialType();
   }, []);
 
-    // Zet de categorieën om naar het formaat dat de dropdown verwacht
-  const materialTypeOptions = materialTypes.map((materiaaltype) => ({
-    id: materiaaltype.id,
-    name: materiaaltype.description, // Zet description om naar 'name'
+  const materialTypeOptions = materialTypes.map((type) => ({
+    id: type.id,
+    name: type.description,
   }));
-    //-----------------------------------------------
 
-  // Functions: pickImages and takePhoto
-  // pickImages: Allows the user to select images from their gallery (up to 3).
-  // takePhoto: Allows the user to take a photo with their camera.
-  // Both add the selected images to the state 'images'.
-  // Functie om een afbeeldingen uit de galerij te kiezen
+  // Pick images from the gallery
   const pickImages = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
@@ -200,7 +172,7 @@ export default function HomeScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      quality: 1,
+      quality: 0.01, // Reduced quality for smaller image sizes
       selectionLimit: 3,
     });
 
@@ -210,40 +182,35 @@ export default function HomeScreen() {
     }
   };
 
-    // Functie om een foto te maken met de camera
-    const takePhoto = async () => {
-      if (images.length >= 3) {
-        alert('Je kunt maximaal 3 afbeeldingen selecteren.');
-        return;
-      }
-    
-      const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
-      if (!permissionResult.granted) {
-        alert('Toestemming voor toegang tot de camera is vereist!');
-        return;
-      }
-    
-      const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        quality: 1,
-      });
-    
-      if (!result.canceled && result.assets) {
-        const capturedImage = result.assets.map((asset) => asset.uri);
-        setImages((prevImages) => [...prevImages, ...capturedImage]);
-      }
-    };
-    
+  // Take a photo with the camera
+  const takePhoto = async () => {
+    if (images.length >= 3) {
+      alert('Je kunt maximaal 3 afbeeldingen selecteren.');
+      return;
+    }
+
+    const permissionResult = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permissionResult.granted) {
+      alert('Toestemming voor toegang tot de camera is vereist!');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.01,
+    });
+
+    if (!result.canceled && result.assets) {
+      const capturedImage = result.assets.map((asset) => asset.uri);
+      setImages((prevImages) => [...prevImages, ...capturedImage]);
+    }
+  };
 
   const removeImage = (uri: string) => {
     setImages(images.filter((image) => image !== uri));
   };
 
-  // Function: uploadToDatabase
-  // Core function for uploading the finding (including title, description, category, material type, images, and location) to the Supabase database.
-  // Checks for required fields (title, description, category, etc.) beforehand.
-  // Processes multiple images and generates unique filenames for storage in Supabase Storage.
-  // Functie om de afbeelding naar Supabase te uploaden
+  // Upload data to Supabase
   const uploadToDatabase = async () => {
     if (!titlePlaatsen) {
       alert('Geef een titel op om door te kunnen gaan');
@@ -261,11 +228,9 @@ export default function HomeScreen() {
       alert('Geef een materiaaltype op om door te kunnen gaan');
       return;
     }
-    if (selectedFindingType == 'Straatvondst'){
-      if (!location) {
-        alert('Locatie toestemming is vereist voor straatvondsten');
-        return;
-      }
+    if (selectedFindingType === 'Straatvondst' && !location) {
+      alert('Locatie toestemming is vereist voor straatvondsten');
+      return;
     }
     if (images.length === 0) {
       alert('Geen afbeeldingen geselecteerd');
@@ -274,14 +239,13 @@ export default function HomeScreen() {
 
     setUploading(true);
     try {
-    
       const urls: string[] = [];
       for (const image of images) {
         const fileName = image.split('/').pop();
-        console.log(image)
         const fileExt = fileName?.split('.').pop() || 'jpeg';
-        //const filePath = `public/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExt}`;
-        const filePath = `public/${Date.now()}_${Math.random().toString(36).substr(2, 5)}.${fileExt}`;
+        const filePath = `public/${Date.now()}_${Math.random()
+          .toString(36)
+          .substr(2, 5)}.${fileExt}`;
 
         const fileContent = await FileSystem.readAsStringAsync(image, {
           encoding: FileSystem.EncodingType.Base64,
@@ -289,7 +253,6 @@ export default function HomeScreen() {
 
         const buffer = Buffer.from(fileContent, 'base64');
 
-        // Upload het bestand naar Supabase
         const { data, error } = await supabase.storage
           .from('UserUploadedImages')
           .upload(filePath, buffer, {
@@ -300,30 +263,19 @@ export default function HomeScreen() {
 
         if (error) throw error;
 
-        console.log('Upload successvol:', data);
-
-        // Verkrijg de publieke URL van het geüploade bestand
         const publicUrl = supabase.storage
           .from('UserUploadedImages')
           .getPublicUrl(filePath).data.publicUrl;
-          const publicUrlCorrect = publicUrl.split('/').pop() || '';
-          console.log("--------" + publicUrlCorrect)
-        urls.push(publicUrlCorrect);
+        urls.push(publicUrl.split('/').pop() || '');
       }
 
-      // Haal de stad op uit de gebruikersprofiel met de functie getStadFromProfile
-      const stad = await getStadFromProfile();  // Haal de stad van de gebruiker
+      const stad = await getStadFromProfile();
 
       if (!stad) {
         alert('Geef een woonplaats op in je account om door te kunnen gaan');
         return;
       }
 
-      //console.log("User ID:", session?.user?.id);
-  
-       
-
-      // Voeg metadata van de afbeelding toe aan de database
       const { error: dbError } = await supabase
         .from('findings')
         .insert([
@@ -336,7 +288,7 @@ export default function HomeScreen() {
             materialTypeId: valueMaterialType?.id,
             stad: stad,
             findingTypeId: selectedFindingType,
-            location: location, // Save location
+            location: location,
           },
         ]);
 
@@ -346,16 +298,21 @@ export default function HomeScreen() {
       setImages([]);
       onChangeTitle('');
       onChangeDescription('');
-      setselectedFindingType('Huisvondst');
+      setSelectedFindingType('Huisvondst');
       setValueCategory(null);
       setValueMaterialType(null);
     } catch (error) {
-      //console.error('Fout bij het uploaden van afbeeldingen:', error);
-      alert('Fout bij het uploaden van vondst:');
+      alert('Fout bij het uploaden van vondst.');
     } finally {
       setUploading(false);
     }
   };
+
+  // Keep styles as necessary
+
+
+
+
   
 
   return (
@@ -440,7 +397,7 @@ export default function HomeScreen() {
                 styles.segmentButton,
                 selectedFindingType === 'Huisvondst' && styles.activeSegmentButton,
               ]}
-              onPress={() => setselectedFindingType('Huisvondst')}
+              onPress={() => setSelectedFindingType('Huisvondst')}
             >
               <Text
                 style={[
