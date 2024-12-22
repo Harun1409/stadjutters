@@ -6,6 +6,8 @@ import {useRouter} from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import { useFocusEffect } from '@react-navigation/native';
+
 type ChatItem = {
     id: number;
     message_content: string;
@@ -22,6 +24,49 @@ export default function ChatsScreen() {
     const { session } = useSession(); // Get the current user session
     const [chats, setChats] = useState<ChatItem[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+
+    // Lijst updaten in real-time
+    useFocusEffect(
+        React.useCallback(() => {
+            const fetchChats = async () => {
+                if (!session?.user?.id) return;
+
+                try {
+                    const { data, error } = await supabase.rpc(
+                        'get_latest_chat_messages_with_unread_count',
+                        { current_user_id: session.user.id }
+                    );
+
+                    if (error) {
+                        console.error('Error fetching chats:', error);
+                        return;
+                    }
+
+                    const formattedChats = data.map((chat: any) => ({
+                        id: chat.sender_id === session?.user?.id ? chat.receiver_id : chat.sender_id,
+                        message_content: chat.message_content,
+                        created_at: chat.created_at,
+                        sender_id: chat.sender_id,
+                        receiver_id: chat.receiver_id,
+                        unread_count: chat.unread_count || 0,
+                        other_user_name: chat.other_user_name || 'Onbekende gebruiker',
+                    }));
+
+                    setChats(
+                        formattedChats.sort(
+                            (a: { created_at: string | number | Date; }, b: { created_at: string | number | Date; }) =>
+                                new Date(b.created_at).getTime() -
+                                new Date(a.created_at).getTime()
+                        )
+                    );
+                } catch (error) {
+                    console.error('Error during fetch:', error);
+                }
+            };
+
+            fetchChats();
+        }, [session])
+    );
 
 
     // Fetch chat messages from Supabase
@@ -50,7 +95,7 @@ export default function ChatsScreen() {
                     is_read: chat.is_read,
                     unread_count: chat.unread_count || 0,
                     other_user_name:
-                        chat.other_user_name
+                        chat.other_user_name || "Onbekende gebruiker",
                 }));
 
                 // console.log('Formatted Chats:', formattedChats); // Controleer of namen worden gemapt
@@ -107,57 +152,63 @@ export default function ChatsScreen() {
             .on(
                 'postgres_changes',
                 {
-                    event: '*', // Luister naar INSERT/UPDATE/DELETE
+                    event: 'INSERT', // Luister alleen naar nieuwe berichten
                     schema: 'public',
                     table: 'chatmessage',
                     filter: `or(sender_id.eq.${userId},receiver_id.eq.${userId})`,
                 },
                 (payload) => {
-                    console.log('Realtime update:', payload);
+                    handleRealtimeMessage(payload.new);
+                    const newMessage = payload.new;
+                    const chatId =
+                        newMessage.sender_id === userId
+                            ? newMessage.receiver_id
+                            : newMessage.sender_id;
 
-                    if (payload.eventType === 'INSERT') {
-                        const newMessage = payload.new;
-                        const chatId =
-                            newMessage.sender_id === userId
-                                ? newMessage.receiver_id
-                                : newMessage.sender_id;
+                    // Update chats met het nieuwe bericht
+                    setChats((prevChats) => {
+                        const chatIndex = prevChats.findIndex((chat) => chat.id === chatId);
 
-                        // @ts-ignore
-                        setChats((prevChats) => {
-                            // Update bestaande chats of voeg nieuwe toe
-                            const existingChatIndex = prevChats.findIndex(
-                                (chat) => chat.id === chatId
+                        if (chatIndex > -1) {
+                            // Update bestaande chat
+                            const updatedChats = [...prevChats];
+                            updatedChats[chatIndex] = {
+                                ...updatedChats[chatIndex],
+                                message_content: newMessage.message_content,
+                                created_at: newMessage.created_at,
+                                is_read: newMessage.sender_id === userId, // Alleen markeren als gelezen voor verzonden berichten
+                                unread_count:
+                                    newMessage.receiver_id === userId
+                                        ? updatedChats[chatIndex].unread_count + 1
+                                        : updatedChats[chatIndex].unread_count,
+                            };
+                            return updatedChats.sort(
+                                (a, b) =>
+                                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
                             );
-
-                            if (existingChatIndex > -1) {
-                                const updatedChats = [...prevChats];
-                                updatedChats[existingChatIndex] = {
-                                    ...updatedChats[existingChatIndex],
+                        } else {
+                            // Nieuwe chat toevoegen
+                            return [
+                                {
+                                    id: chatId,
                                     message_content: newMessage.message_content,
                                     created_at: newMessage.created_at,
-                                    is_read: newMessage.is_read,
-                                };
-                                return updatedChats.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                            } else {
-                                // Nieuwe chat toevoegen
-                                return [
-                                    {
-                                        id: chatId,
-                                        message_content: newMessage.message_content,
-                                        created_at: newMessage.created_at,
-                                        sender_id: newMessage.sender_id,
-                                        receiver_id: newMessage.receiver_id,
-                                        is_read: newMessage.is_read,
-                                        other_user_name:
-                                            newMessage.sender_id === userId
-                                                ? newMessage.receiver_name
-                                                : newMessage.sender_name,
-                                    },
-                                    ...prevChats,
-                                ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-                            }
-                        });
-                    }
+                                    sender_id: newMessage.sender_id,
+                                    receiver_id: newMessage.receiver_id,
+                                    is_read: newMessage.sender_id === userId,
+                                    unread_count: newMessage.receiver_id === userId ? 1 : 0,
+                                    other_user_name:
+                                        newMessage.sender_id === userId
+                                            ? newMessage.receiver_name
+                                            : newMessage.sender_name || "Onbekende gebruiker",
+                                },
+                                ...prevChats,
+                            ].sort(
+                                (a, b) =>
+                                    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                            );
+                        }
+                    });
                 }
             )
             .subscribe();
@@ -166,6 +217,59 @@ export default function ChatsScreen() {
             subscription.unsubscribe();
         };
     }, [session]);
+
+    // Realtime message updates
+    const handleRealtimeMessage = (newMessage: any) => {
+        const userId = session?.user?.id;
+        if (!userId) return;
+
+        const chatId =
+            newMessage.sender_id === userId
+                ? newMessage.receiver_id
+                : newMessage.sender_id;
+
+        // @ts-ignore
+        setChats((prevChats) => {
+            const chatIndex = prevChats.findIndex((chat) => chat.id === chatId);
+
+            if (chatIndex > -1) {
+                // Update bestaande chat
+                const updatedChats = [...prevChats];
+                updatedChats[chatIndex] = {
+                    ...updatedChats[chatIndex],
+                    message_content: newMessage.message_content,
+                    created_at: newMessage.created_at,
+                    unread_count:
+                        newMessage.receiver_id === userId
+                            ? updatedChats[chatIndex].unread_count + 1
+                            : updatedChats[chatIndex].unread_count,
+                };
+                return updatedChats.sort(
+                    (a, b) =>
+                        new Date(b.created_at).getTime() -
+                        new Date(a.created_at).getTime()
+                );
+            } else {
+                // Nieuwe chat toevoegen
+                return [
+                    {
+                        id: chatId,
+                        message_content: newMessage.message_content,
+                        created_at: newMessage.created_at,
+                        sender_id: newMessage.sender_id,
+                        receiver_id: newMessage.receiver_id,
+                        unread_count: newMessage.receiver_id === userId ? 1 : 0,
+                        other_user_name: newMessage.receiver_name || 'Onbekende gebruiker',
+                    },
+                    ...prevChats,
+                ].sort(
+                    (a, b) =>
+                        new Date(b.created_at).getTime() -
+                        new Date(a.created_at).getTime()
+                );
+            }
+        });
+    };
 
     const renderChatItem = ({ item }: { item: ChatItem }) => {
         const userId = session?.user?.id;
@@ -194,12 +298,15 @@ export default function ChatsScreen() {
                             <Text style={styles.notificationText}>{item.unread_count}</Text>
                         </View>
                     ) : (
-                        <Icon
-                            name="check-all"
-                            size={18}
-                            color={item.is_read ? '#007AFF' : '#A9A9A9'}
-                            style={styles.vinkjesIcon}
-                        />
+                        // Toon alleen vinkjes als het bericht is verzonden door de ingelogde gebruiker
+                        item.sender_id === userId && (
+                            <Icon
+                                name="check-all"
+                                size={18}
+                                color={item.is_read ? '#007AFF' : '#A9A9A9'}
+                                style={styles.vinkjesIcon}
+                            />
+                        )
                     )}
 
                 </View>
