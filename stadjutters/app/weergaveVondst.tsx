@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Dimensions, Modal, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Dimensions, Modal, TouchableOpacity, ScrollView } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; //https://static.enapter.com/rn/icons/material-community.html
+
 
 interface FindingDetails {
   title: string;
@@ -132,8 +134,9 @@ export default function WeergaveVondst() {
 
   return (
     <View style={styles.container}>
+        <ScrollView>
       <Text style={styles.title}>{finding.title}</Text>
-
+      <View style={styles.divider}/>
       {/* Swipeable Images Carousel */}
       {finding.image_urls.length > 0 ? (
         <FlatList
@@ -147,10 +150,17 @@ export default function WeergaveVondst() {
       ) : (
         <Text style={styles.noImage}>No images available</Text>
       )}
-
+    <View style={styles.divider}/>
       {/* Display Details */}
-      <Text style={styles.description}>Beschrijving: {finding.description}</Text>
-      <Text style={styles.stad}>Locatie: {finding.stad}</Text>
+      <Text style={styles.descriptionTitle}>Productbeschrijving</Text>
+      <Text style={styles.description}>{finding.description}</Text>
+      <View style={styles.divider}/>
+      <View style = {{flexDirection: 'row'}}>
+        <Icon name="map-marker" size={28} color="darkgray"/>
+        <Text style={styles.stad}>{finding.stad}</Text>
+      </View>
+      <View style={styles.divider}/>
+      <Text style={styles.descriptionTitle}>Kenmerken</Text>
       <Text style={styles.detail}>Categorie: {finding.categoryDescription}</Text>
       <Text style={styles.detail}>Materiaal: {finding.materialTypeDescription}</Text>
       <Text style={styles.detail}>Vondst: {finding.findingTypeId}</Text>
@@ -164,6 +174,7 @@ export default function WeergaveVondst() {
           </TouchableOpacity>
         </View>
       </Modal>
+      </ScrollView>
     </View>
   );
 }
@@ -173,18 +184,24 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
     backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+  },
+  divider: { 
+    height: 1, 
+    backgroundColor: 'gray', 
+    marginVertical: 10,
   },
   carousel: {
-    marginBottom: 20,
+    maxHeight: 250, // Set the height to match the image
+    marginBottom: 10,
+    marginTop: 10,
   },
   image: {
     width: Dimensions.get('window').width * 0.6,
-    height: 250,
+    height: 250, // Keep consistent with carousel height
     borderRadius: 8,
     marginHorizontal: 10,
-    resizeMode: 'cover',  // This will ensure the image fills the container while maintaining its aspect ratio
+    resizeMode: 'cover',
   },
   noImage: {
     fontSize: 16,
@@ -192,25 +209,29 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
     marginBottom: 10,
   },
   stad: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 10,
+    fontSize: 16,
+    color: '#444',
+    marginTop: 5,
+    marginStart: 5
   },
   description: {
     fontSize: 16,
     color: '#444',
-    marginBottom: 10,
-    textAlign: 'center',
+  },
+  descriptionTitle: {
+    fontSize: 17,
+    color: '#444',
+    fontWeight: 'bold',
   },
   detail: {
-    fontSize: 14,
-    color: '#888',
+    fontSize: 16,
+    color: '#444',
     marginTop: 5,
   },
   loadingIndicator: {

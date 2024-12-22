@@ -115,7 +115,7 @@ export default function Account({ session }: { session: Session }) {
           borderRadius: 5, // Customize the button style 
           paddingVertical: 10, 
           paddingHorizontal: 20,
-          backgroundColor: '#7A3038',
+          backgroundColor: '#636F3C',
         }}
           title={loading ? 'Loading ...' : 'Update'}
           onPress={() => updateProfile({ username, website, stad, avatar_url: avatarUrl })}
@@ -128,7 +128,7 @@ export default function Account({ session }: { session: Session }) {
           borderRadius: 5, // Customize the button style 
           paddingVertical: 10, 
           paddingHorizontal: 20,
-          backgroundColor: '#7A3038',
+          backgroundColor: '#636F3C',
         }}
         title="Uitloggen" onPress={() => supabase.auth.signOut()} />
       </View>

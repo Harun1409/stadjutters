@@ -75,7 +75,7 @@ export default function Auth() {
             borderRadius: 5, // Customize the button style 
             paddingVertical: 10, 
             paddingHorizontal: 20,
-            backgroundColor: '#7A3038',
+            backgroundColor: '#636F3C',
           }}/>
       </View>
       <View style={styles.verticallySpaced}>
@@ -86,7 +86,7 @@ export default function Auth() {
           borderRadius: 5, // Customize the button style 
           paddingVertical: 10, 
           paddingHorizontal: 20,
-          backgroundColor: '#7A3038',
+          backgroundColor: '#636F3C',
         }}
           />
       </View>

@@ -307,14 +307,7 @@ export default function HomeScreen() {
       setUploading(false);
     }
   };
-
-  // Keep styles as necessary
-
-
-
-
   
-
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.tilesContainer}>
@@ -470,7 +463,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  // Your existing styles, plus:
   container: {
     flex: 1,
     backgroundColor: '#fff',
@@ -488,12 +480,12 @@ const styles = StyleSheet.create({
     borderColor: 'lightgray',
     borderWidth: 0.5,
     paddingHorizontal: 8,
-    paddingRight: 40, // Add padding to avoid overlapping the counter
+    paddingRight: 40, 
     borderRadius: 5, 
   },
   inputDescription: {
     height: 100,
-    textAlignVertical: 'top', // Ensures text starts at the top in multiline inputs
+    textAlignVertical: 'top', 
   },
   imageContainer: {
     marginTop: 0,
@@ -504,9 +496,9 @@ const styles = StyleSheet.create({
     width: '97%', 
   },
   imageWrapper: {
-    flexBasis: '31%', // Zorgt voor 3 kolommen (ongeveer 3x per rij)
-    margin: '1%', // Ruimte tussen de items
-    aspectRatio: 1, // Vierkante afbeelding
+    flexBasis: '31%', 
+    margin: '1%', 
+    aspectRatio: 1, 
     position: 'relative',
   },
   image: {
@@ -529,7 +521,7 @@ const styles = StyleSheet.create({
     width: '95%',
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#3498db',
+    borderColor: '#636F3C',
     borderRadius: 5,
     backgroundColor: 'white',
     justifyContent: 'center',
@@ -543,10 +535,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeSegmentButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#636F3C',
   },
   segmentButtonText: {
-    color: '#3498db',
+    color: '#636F3C',
     fontWeight: '600',
   },
   activeSegmentButtonText: {
@@ -561,7 +553,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   customButton: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#636F3C',
     paddingVertical: 12,
     paddingHorizontal: 20, 
     borderRadius: 5, 
@@ -572,14 +564,14 @@ const styles = StyleSheet.create({
   bottomButtonContainer: {
     position: 'absolute',
     bottom: 5,
-    width: '95%', // Match the width of the button
+    width: '95%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'white', // Optional: to ensure the background is clear
+    backgroundColor: 'white', 
     paddingVertical: 10,
   },
   customButtonPlaatsen: {
-    backgroundColor: '#3498db',
+    backgroundColor: '#636F3C',
     paddingVertical: 12,
     paddingHorizontal: 20, 
     borderRadius: 5, 
@@ -613,14 +605,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'gray',
   },
   counter: {
-    position: 'absolute', // Positions the counter within the input container
-    right: 15, // Aligns the counter to the right edge
-    top: 15, // Adjusts vertical alignment (fine-tune for aesthetics)
+    position: 'absolute', 
+    right: 15,
+    top: 15, 
     fontSize: 12,
     color: 'gray',
   },
   inputContainer: {
-    position: 'relative', // Enables absolute positioning for the counter
+    position: 'relative',
     marginBottom: 0,
     margin: 0,
     borderWidth: 0,
