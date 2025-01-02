@@ -199,9 +199,6 @@ export default function HomeScreen() {
     }
   };
 
-  const truncateTitle = (title: string) => {
-    return title.length > 33 ? title.substring(0, 33) + '...' : title;
-  };
 
   const clearCategoryFilter = () => {
     setSelectedCategory('');
@@ -322,7 +319,7 @@ export default function HomeScreen() {
                 <Image source={{ uri: item.image_url }} style={styles.image} />
               )}
               <View>
-                <Text style={styles.title}>{truncateTitle(item.title)}</Text>
+                <Text style={styles.title} numberOfLines={2}>{item.title}</Text>
                 <Text style={styles.stad}>{item.stad}</Text>
               </View>
             </Link>
