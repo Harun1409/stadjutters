@@ -16,7 +16,7 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
     const {session} = useSession();
     const [username, setUsername] = useState('');
     const translateX = useSharedValue(250);
-    const iconColor = '#636F3C';
+    const iconColor = '#7A3038';
 
     // Animatie voor het menu
     const animatedStyle = useAnimatedStyle(() => ({

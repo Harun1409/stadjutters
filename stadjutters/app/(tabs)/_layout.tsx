@@ -22,7 +22,7 @@ export default function TabLayout() {
             borderBottomWidth: 1,
             borderBottomColor: 'lightgray',
         },
-        tabBarActiveTintColor: '#636F3C',
+        tabBarActiveTintColor: '#7A3038',
         tabBarButton: HapticTab,
         tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
@@ -89,7 +89,7 @@ export default function TabLayout() {
                         <Icon
                             name="account"
                             size={28}
-                            color="#636F3C"
+                            color="#7A3038"
                             style={styles.headerIcon}
                             onPress={openMenu}
                         />

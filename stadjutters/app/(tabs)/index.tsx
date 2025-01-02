@@ -5,10 +5,15 @@ import {
   Text, 
   View, 
   Image, 
-  ActivityIndicator 
+  ActivityIndicator, 
+  TouchableOpacity, 
+  Modal, 
+  ScrollView,
+  Switch 
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { Link } from 'expo-router';  // Use Link from expo-router
+import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for cross icon
 
 interface Finding {
   id: string; // Unique identifier
@@ -17,24 +22,53 @@ interface Finding {
   image_url: string | null;
 }
 
+interface Category {
+  id: number;
+  description: string;
+}
+
+interface MaterialType {
+  id: number;
+  description: string;
+}
+
 const PAGE_SIZE = 15; // Number of items to load per page
 
-const fetchFindings = async (page: number): Promise<Finding[]> => {
+const fetchFindings = async (
+  page: number,
+  search?: string,
+  category?: string,
+  material?: string
+): Promise<Finding[]> => {
   try {
-    const { data, error } = await supabase
+    let query = supabase
       .from('findings')
-      .select('id, title, stad, image_url')
-      .eq('findingTypeId', 'Huisvondst') // Filter op 'Huisvondst'
+      .select('id, title, stad, image_url, categoryId, materialTypeId')
+      .eq('findingTypeId', 'Huisvondst');
+
+    if (search) {
+      query = query.ilike('title', `%${search}%`);
+    }
+
+    if (category && material) {
+      query = query.eq('categoryId', category).eq('materialTypeId', material);
+    } else if (category) {
+      query = query.eq('categoryId', category);
+    } else if (material) {
+      query = query.eq('materialTypeId', material);
+    }
+
+    const { data, error } = await query
       .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
     if (error) {
-      console.error('Error fetching data:', error);
+      console.error('FOUT BIJ HET OPHALEN VAN GEGEVENS:', error);
       return [];
     }
 
     return data as Finding[];
   } catch (error) {
-    console.error('Unexpected error fetching data:', error);
+    console.error('ONVERWACHTE FOUT BIJ HET OPHALEN VAN GEGEVENS:', error);
     return [];
   }
 };
@@ -47,13 +81,13 @@ const fetchSignedUrl = async (path: string) => {
       .createSignedUrl(path, 60);
 
     if (error) {
-      console.error('Error creating signed URL:', error);
+      console.error('FOUT BIJ HET AANMAKEN VAN EEN ONDERTEKENDE URL:', error);
       return null;
     }
 
     return data.signedUrl;
   } catch (error) {
-    console.error('Unexpected error creating signed URL:', error);
+    console.error('ONVERWACHTE FOUT BIJ HET AANMAKEN VAN EEN ONDERTEKENDE URL:', error);
     return null;
   }
 };
@@ -64,12 +98,24 @@ export default function HomeScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedMaterial, setSelectedMaterial] = useState('');
+  const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [isMaterialModalVisible, setMaterialModalVisible] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
 
-  const loadFindings = async (nextPage: number) => {
-    if (!hasMore) return;
+  const loadFindings = async (nextPage: number, clearFindings: boolean = false) => {
+    if (!hasMore && !clearFindings) return;
+
+    if (clearFindings) {
+      setFindings([]); // BESTAANDE VONDSTEN WISSEN
+      setPage(0); // PAGINA RESETTEN
+      setHasMore(true); // RESET HASMORE
+    }
 
     setLoadingMore(true);
-    const data = await fetchFindings(nextPage);
+    const data = await fetchFindings(nextPage, undefined, selectedCategory, selectedMaterial);
     if (data.length === 0) {
       setHasMore(false);
     } else {
@@ -82,22 +128,59 @@ export default function HomeScreen() {
         return finding;
       }));
 
-      setFindings((prev) => [...prev, ...findingsWithUrls]);
+      setFindings((prev) => clearFindings ? findingsWithUrls : [...prev, ...findingsWithUrls]);
     }
     setLoadingMore(false);
   };
 
+  const retrieveCategories = async () => {
+    const { data, error } = await supabase
+      .from('category')
+      .select('id, description');
+
+    if (error) {
+      console.error('FOUT BIJ HET OPHALEN VAN CATEGORIEËN:', error);
+      return;
+    }
+    setCategories(data || []);
+  };
+
+  const retrieveMaterialTypes = async () => {
+    const { data, error } = await supabase
+      .from('materialType')
+      .select('id, description');
+
+    if (error) {
+      console.error('FOUT BIJ HET OPHALEN VAN MATERIAALSOORTEN:', error);
+      return;
+    }
+    setMaterialTypes(data || []);
+  };
+
   useEffect(() => {
-    const fetchInitialFindings = async () => {
-      await loadFindings(0);
+    const fetchInitialData = async () => {
+      setLoading(true);
+      await retrieveCategories();
+      await retrieveMaterialTypes();
+      await loadFindings(0, true); // BESTAANDE VONDSTEN WISSEN VOORDAT INITIËLE GEGEVENS WORDEN GELADEN
       setLoading(false);
     };
 
-    fetchInitialFindings();
+    fetchInitialData();
   }, []);
 
+  useEffect(() => {
+    const applyFilters = async () => {
+      setLoading(true);
+      await loadFindings(0, true); // BESTAANDE VONDSTEN WISSEN VOORDAT FILTERS WORDEN TOEGEPAST
+      setLoading(false);
+    };
+
+    applyFilters();
+  }, [selectedCategory, selectedMaterial]);
+
   const handleLoadMore = () => {
-    if (!loadingMore) {
+    if (!loadingMore && hasMore) {
       setPage((prevPage) => {
         const nextPage = prevPage + 1;
         loadFindings(nextPage);
@@ -110,38 +193,121 @@ export default function HomeScreen() {
     return title.length > 33 ? title.substring(0, 33) + '...' : title;
   };
 
+  const clearCategoryFilter = () => {
+    setSelectedCategory('');
+  };
+
+  const clearMaterialFilter = () => {
+    setSelectedMaterial('');
+  };
+
   if (loading) {
     return <ActivityIndicator size="large" style={styles.loadingIndicator} />;
   }
 
   return (
     <View style={styles.container}>
+      {/* FILTER LABELS */}
+      <View style={styles.filterContainer}>
+        <View style={styles.filterLabelContainer}>
+          <TouchableOpacity onPress={() => setCategoryModalVisible(true)} style={styles.filterLabel}>
+            <Text>{categories.find(cat => cat.id.toString() === selectedCategory)?.description || 'Selecteer categorie'}</Text>
+          </TouchableOpacity>
+          {selectedCategory ? (
+            <TouchableOpacity onPress={clearCategoryFilter} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="gray" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <View style={styles.filterLabelContainer}>
+          <TouchableOpacity onPress={() => setMaterialModalVisible(true)} style={styles.filterLabel}>
+            <Text>{materialTypes.find(mat => mat.id.toString() === selectedMaterial)?.description || 'Selecteer materiaal'}</Text>
+          </TouchableOpacity>
+          {selectedMaterial ? (
+            <TouchableOpacity onPress={clearMaterialFilter} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="gray" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
+      {/* CATEGORIE MODAL */}
+      <Modal visible={isCategoryModalVisible} transparent={true} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecteer categorie</Text>
+            <FlatList
+              data={categories}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedCategory(item.id.toString());
+                    setCategoryModalVisible(false);
+                  }}
+                  style={styles.modalItem}
+                >
+                  <Text>{item.description}</Text>
+                </TouchableOpacity>
+              )}
+              style={styles.modalList}
+            />
+            <TouchableOpacity onPress={() => setCategoryModalVisible(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Sluiten</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      {/* MATERIAAL MODAL */}
+      <Modal visible={isMaterialModalVisible} transparent={true} animationType="slide">
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Selecteer materiaal</Text>
+            <FlatList
+              data={materialTypes}
+              keyExtractor={(item) => item.id.toString()}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedMaterial(item.id.toString());
+                    setMaterialModalVisible(false);
+                  }}
+                  style={styles.modalItem}
+                >
+                  <Text>{item.description}</Text>
+                </TouchableOpacity>
+              )}
+              style={styles.modalList}
+            />
+            <TouchableOpacity onPress={() => setMaterialModalVisible(false)} style={styles.closeButton}>
+              <Text style={styles.closeButtonText}>Sluiten</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <FlatList
         data={findings}
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }) => (
-          
-          <View style={styles.tile} >
+          <View style={styles.tile}>
             <Link href={{
                 pathname: '/weergaveVondst',
-                params: { id: item.id }, // Pass the unique identifier
+                params: { id: item.id }, // UNIEKE IDENTIFICATOR DOORGEVEN
               }}>
-            {item.image_url && (
-              <Image source={{ uri: item.image_url }} style={styles.image} />
-            )}
-            <View>
-            <Text style={styles.title}>{truncateTitle(item.title)}</Text>
-            <Text style={styles.stad}>{item.stad}</Text>
-            </View>
+              {item.image_url && (
+                <Image source={{ uri: item.image_url }} style={styles.image} />
+              )}
+              <View>
+                <Text style={styles.title}>{truncateTitle(item.title)}</Text>
+                <Text style={styles.stad}>{item.stad}</Text>
+              </View>
             </Link>
           </View>
-          
         )}
         contentContainerStyle={styles.tilesContainer}
         onEndReached={handleLoadMore}
         onEndReachedThreshold={0.5}
         ListFooterComponent={loadingMore ? <ActivityIndicator size="small" /> : null}
-        numColumns={2}  // Set the number of columns to 2 and keep it constant
+        numColumns={2}  // AANTAL KOLOMMEN OP 2 INSTELLEN EN CONSTANT HOUDEN
       />
     </View>
   );
@@ -152,6 +318,65 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 10,
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  filterLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  filterLabel: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginHorizontal: 5,
+    backgroundColor: '#f0f0f0',
+  },
+  clearButton: {
+    marginHorizontal: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 20,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  modalItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    width: '100%',
+    alignItems: 'center',
+  },
+  closeButton: {
+    marginTop: 20,
+    padding: 10,
+    backgroundColor: '#7A3038',
+    borderRadius: 5,
+  },
+  closeButtonText: {
+    color: '#fff',
+    fontSize: 16,
   },
   tilesContainer: {
     justifyContent: 'space-between',
@@ -179,18 +404,27 @@ const styles = StyleSheet.create({
   title: {
     marginTop: 5,
     fontWeight: 'bold',
-    fontSize: 14, // Increased the font size
-    color: '#333', // Changed the text color
-    marginBottom: 5, // Added some margin to separate title and stad
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 5, 
   },
   stad: {
-    fontSize: 12, // Increased the font size
-    color: '#666', // Changed the text color
+    fontSize: 12, 
+    color: '#666', 
     marginTop: 0,
   },
   loadingIndicator: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  modalList: { maxHeight: 220, 
+    width: '100%', 
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
 });

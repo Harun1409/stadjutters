@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
     width: '95%',
     flexDirection: 'row',
     borderWidth: 1,
-    borderColor: '#636F3C',
+    borderColor: '#7A3038',
     borderRadius: 5,
     backgroundColor: 'white',
     justifyContent: 'center',
@@ -535,10 +535,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   activeSegmentButton: {
-    backgroundColor: '#636F3C',
+    backgroundColor: '#7A3038',
   },
   segmentButtonText: {
-    color: '#636F3C',
+    color: '#7A3038',
     fontWeight: '600',
   },
   activeSegmentButtonText: {
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   customButton: {
-    backgroundColor: '#636F3C',
+    backgroundColor: '#7A3038',
     paddingVertical: 12,
     paddingHorizontal: 20, 
     borderRadius: 5, 
@@ -571,7 +571,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   customButtonPlaatsen: {
-    backgroundColor: '#636F3C',
+    backgroundColor: '#7A3038',
     paddingVertical: 12,
     paddingHorizontal: 20, 
     borderRadius: 5, 
