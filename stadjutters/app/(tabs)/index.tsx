@@ -6,14 +6,16 @@ import {
   View, 
   Image, 
   ActivityIndicator, 
+  TextInput, 
   TouchableOpacity, 
   Modal, 
   ScrollView,
-  Switch 
+  Switch,
+  TouchableWithoutFeedback 
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { Link } from 'expo-router';  // Use Link from expo-router
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for cross icon
+import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for icons
 
 interface Finding {
   id: string; // Unique identifier
@@ -98,6 +100,7 @@ export default function HomeScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedMaterial, setSelectedMaterial] = useState('');
   const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
@@ -115,7 +118,8 @@ export default function HomeScreen() {
     }
 
     setLoadingMore(true);
-    const data = await fetchFindings(nextPage, undefined, selectedCategory, selectedMaterial);
+    const trimmedSearchQuery = searchQuery.trim(); // ZOEKOPDRACHT TRIMMEN
+    const data = await fetchFindings(nextPage, trimmedSearchQuery, selectedCategory, selectedMaterial);
     if (data.length === 0) {
       setHasMore(false);
     } else {
@@ -179,6 +183,12 @@ export default function HomeScreen() {
     applyFilters();
   }, [selectedCategory, selectedMaterial]);
 
+  const handleSearch = async () => {
+    setLoading(true);
+    await loadFindings(0, true); // BESTAANDE VONDSTEN WISSEN VOORDAT ZOEKOPDRACHT WORDT TOEGEPAST
+    setLoading(false);
+  };
+
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
       setPage((prevPage) => {
@@ -207,10 +217,23 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.container}>
+      {/* ZOEK BALK */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchBar}
+          placeholder="Search..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          onSubmitEditing={handleSearch} // ZOEKOPDRACHT UITVOEREN BIJ ENTER
+        />
+        <TouchableOpacity onPress={handleSearch} style={styles.searchIcon}>
+          <Ionicons name="search" size={24} color="gray" />
+        </TouchableOpacity>
+      </View>
       {/* FILTER LABELS */}
       <View style={styles.filterContainer}>
         <View style={styles.filterLabelContainer}>
-          <TouchableOpacity onPress={() => setCategoryModalVisible(true)} style={styles.filterLabel}>
+          <TouchableOpacity onPress={() => setCategoryModalVisible(true)} style={[styles.filterLabel, {marginRight: 5}]}>
             <Text>{categories.find(cat => cat.id.toString() === selectedCategory)?.description || 'Selecteer categorie'}</Text>
           </TouchableOpacity>
           {selectedCategory ? (
@@ -220,7 +243,7 @@ export default function HomeScreen() {
           ) : null}
         </View>
         <View style={styles.filterLabelContainer}>
-          <TouchableOpacity onPress={() => setMaterialModalVisible(true)} style={styles.filterLabel}>
+          <TouchableOpacity onPress={() => setMaterialModalVisible(true)} style={[styles.filterLabel, {marginLeft: 5}]}>
             <Text>{materialTypes.find(mat => mat.id.toString() === selectedMaterial)?.description || 'Selecteer materiaal'}</Text>
           </TouchableOpacity>
           {selectedMaterial ? (
@@ -231,58 +254,60 @@ export default function HomeScreen() {
         </View>
       </View>
       {/* CATEGORIE MODAL */}
-      <Modal visible={isCategoryModalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Selecteer categorie</Text>
-            <FlatList
-              data={categories}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedCategory(item.id.toString());
-                    setCategoryModalVisible(false);
-                  }}
-                  style={styles.modalItem}
-                >
-                  <Text>{item.description}</Text>
-                </TouchableOpacity>
-              )}
-              style={styles.modalList}
-            />
-            <TouchableOpacity onPress={() => setCategoryModalVisible(false)} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Sluiten</Text>
-            </TouchableOpacity>
+      <Modal visible={isCategoryModalVisible} transparent={true}>
+        <TouchableWithoutFeedback onPress={() => setCategoryModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecteer categorie</Text>
+                <FlatList
+                  data={categories}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedCategory(item.id.toString());
+                        setCategoryModalVisible(false);
+                      }}
+                      style={styles.modalItem}
+                    >
+                      <Text style={{fontSize: 20}}>{item.description}</Text>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.modalList}
+                />
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
       {/* MATERIAAL MODAL */}
-      <Modal visible={isMaterialModalVisible} transparent={true} animationType="slide">
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Selecteer materiaal</Text>
-            <FlatList
-              data={materialTypes}
-              keyExtractor={(item) => item.id.toString()}
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedMaterial(item.id.toString());
-                    setMaterialModalVisible(false);
-                  }}
-                  style={styles.modalItem}
-                >
-                  <Text>{item.description}</Text>
-                </TouchableOpacity>
-              )}
-              style={styles.modalList}
-            />
-            <TouchableOpacity onPress={() => setMaterialModalVisible(false)} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>Sluiten</Text>
-            </TouchableOpacity>
+      <Modal visible={isMaterialModalVisible} transparent={true}>
+        <TouchableWithoutFeedback onPress={() => setMaterialModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecteer materiaal</Text>
+                <FlatList
+                  data={materialTypes}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedMaterial(item.id.toString());
+                        setMaterialModalVisible(false);
+                      }}
+                      style={styles.modalItem}
+                    >
+                      <Text style={{fontSize: 20}}>{item.description}</Text>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.modalList}
+                />
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
       <FlatList
         data={findings}
@@ -319,10 +344,32 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     padding: 10,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    marginBottom: 10,
+  },
+  searchBar: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  searchIcon: {
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    position: 'absolute',
+    right: 10,
+  },
   filterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 10,
+    width: '100%',
+    padding: 0
   },
   filterLabelContainer: {
     flexDirection: 'row',
@@ -337,7 +384,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: 5,
+    marginHorizontal: 0,
     backgroundColor: '#f0f0f0',
   },
   clearButton: {
@@ -345,38 +392,29 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-end', // Align modal at the bottom
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    width: '80%',
+    width: '100%', // Full width
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
     padding: 20,
     alignItems: 'center',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 20,
   },
   modalItem: {
     paddingVertical: 10,
-    borderBottomWidth: 1,
+    borderBottomWidth: 0,
     borderBottomColor: '#ccc',
     width: '100%',
     alignItems: 'center',
-  },
-  closeButton: {
-    marginTop: 20,
-    padding: 10,
-    backgroundColor: '#7A3038',
-    borderRadius: 5,
-  },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 16,
   },
   tilesContainer: {
     justifyContent: 'space-between',
