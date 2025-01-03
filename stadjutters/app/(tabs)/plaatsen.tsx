@@ -22,6 +22,7 @@ import * as FileSystem from 'expo-file-system'; // STAAT JE TOE OM BESTANDEN VAN
 import { Buffer } from 'buffer';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons'; // IMPORT IONICONS VOOR ICONEN
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator'; // VOOR HET CONVERTEREN VAN NON-JEPG AFBEELDINGEN NAAR JPEG
 
 global.Buffer = Buffer;
 
@@ -240,45 +241,54 @@ export default function HomeScreen() {
       return;
     }
 
+
+
     setUploading(true);
     try {
       const urls: string[] = [];
       for (const image of images) {
         const fileName = image.split('/').pop();
-        const fileExt = fileName?.split('.').pop() || 'jpeg';
+        const fileExt = 'jpeg';  // Convert all images to JPEG
         const filePath = `public/${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 5)}.${fileExt}`;
-
-        const fileContent = await FileSystem.readAsStringAsync(image, {
+    
+        // Convert image to JPEG
+        const manipulatedImage = await manipulateAsync(
+          image,
+          [{ resize: { width: 1024 } }],  // Optional: resize the image
+          { compress: 1, format: SaveFormat.JPEG }
+        );
+    
+        const fileContent = await FileSystem.readAsStringAsync(manipulatedImage.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-
+    
         const buffer = Buffer.from(fileContent, 'base64');
-
+    
         const { data, error } = await supabase.storage
           .from('UserUploadedImages')
           .upload(filePath, buffer, {
-            contentType: `image/${fileExt}`,
+            contentType: `image/${fileExt}`,  // Content type is now always JPEG
             cacheControl: '3600',
             upsert: false,
           });
-
+    
         if (error) throw error;
-
+    
         const publicUrl = supabase.storage
           .from('UserUploadedImages')
           .getPublicUrl(filePath).data.publicUrl;
         urls.push(publicUrl.split('/').pop() || '');
       }
-
+    
       const stad = await getStadFromProfile();
-
+    
       if (!stad) {
         alert('Geef een woonplaats op in je account om door te kunnen gaan');
         return;
       }
-
+    
       const { error: dbError } = await supabase
         .from('findings')
         .insert([
@@ -294,9 +304,9 @@ export default function HomeScreen() {
             location: location,
           },
         ]);
-
+    
       if (dbError) throw dbError;
-
+    
       alert('Vondst succesvol geplaatst!');
       setImages([]);
       onChangeTitle('');
@@ -309,6 +319,7 @@ export default function HomeScreen() {
     } finally {
       setUploading(false);
     }
+    
   };
 
   return (
