@@ -10,6 +10,16 @@ interface Finding {
   description: string;
   location: string;
   image_url: string;
+  categoryId: string;
+  materialTypeId: string;
+}
+
+interface Category {
+  description: string;
+}
+
+interface MaterialType {
+  description: string;
 }
 
 export default function App() {
@@ -19,6 +29,8 @@ export default function App() {
   const [selectedMarker, setSelectedMarker] = useState<Finding | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [categoryDescription, setCategoryDescription] = useState<string>('');
+  const [materialTypeDescription, setMaterialTypeDescription] = useState<string>('');
   const [slideAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -45,7 +57,7 @@ export default function App() {
     const fetchMarkers = async () => {
       const { data, error } = await supabase
         .from('findings')
-        .select('id, title, description, location, image_url')
+        .select('id, title, description, location, image_url, categoryId, materialTypeId')
         .eq('findingTypeId', 'Straatvondst');
 
       if (error) {
@@ -90,10 +102,37 @@ export default function App() {
     return signedUrls.filter((url) => url !== null) as string[];
   };
 
+  const fetchCategoryAndMaterialType = async (categoryId: string, materialTypeId: string) => {
+    try {
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('category')
+        .select('description')
+        .eq('id', categoryId)
+        .single();
+
+      const { data: materialTypeData, error: materialTypeError } = await supabase
+        .from('materialType')
+        .select('description')
+        .eq('id', materialTypeId)
+        .single();
+
+      if (categoryError || materialTypeError) {
+        console.error('Fout bij ophalen van category of materialType:', categoryError || materialTypeError);
+        return;
+      }
+
+      setCategoryDescription(categoryData?.description || '');
+      setMaterialTypeDescription(materialTypeData?.description || '');
+    } catch (error) {
+      console.error('Fout bij ophalen van category en materialType:', error);
+    }
+  };
+
   const handleMarkerPress = async (marker: Finding) => {
     const urls = await fetchImageUrls(marker.image_url);
     setImageUrls(urls);
     setSelectedMarker(marker);
+    await fetchCategoryAndMaterialType(marker.categoryId, marker.materialTypeId);
     setModalVisible(true);
     Animated.timing(slideAnim, {
       toValue: 1,
@@ -168,11 +207,14 @@ export default function App() {
             <View style={styles.modalBackground}>
               <TouchableWithoutFeedback>
                 <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [300, 0] }) }] }]}>
+
                   <Text style={styles.modalTitle}>{selectedMarker.title}</Text>
                   <View style={styles.divider}/>
                   <Text style={styles.modalDescription}>{selectedMarker.description}</Text>
                   <View style={styles.divider}/>
-
+                  <Text style={styles.modalDescription}>Categorie: {categoryDescription}</Text>
+                  <Text style={styles.modalDescription}>Materiaal: {materialTypeDescription}</Text>
+                  <View style={styles.divider}/>
                   <ScrollView horizontal>
                     {imageUrls.map((url, index) => (
                       <TouchableWithoutFeedback key={index}>
@@ -225,7 +267,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 20,
     padding: 20,
-    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
@@ -237,12 +278,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     color: '#333',
+    textAlign: 'center',
   },
   modalDescription: {
     fontSize: 16,
     marginBottom: 10,
     color: '#666',
-    //textAlign: 'center',
   },
   modalImage: {
     width: 200,
