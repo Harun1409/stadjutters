@@ -374,7 +374,7 @@ export default function HomeScreen() {
               onPress={() => setMaterialModalVisible(true)}
               style={[styles.filterLabel, {marginLeft: 5}]}
             >
-              <Text style={styles.filterLabelText}>{valueMaterialType?.description || 'Selecteer materiaaltype'}</Text>
+              <Text style={styles.filterLabelText}>{valueMaterialType?.description || 'Selecteer materiaal'}</Text>
             </TouchableOpacity>
             {valueMaterialType ? (
               <TouchableOpacity onPress={() => setValueMaterialType(null)} style={styles.clearButton}>
@@ -493,7 +493,7 @@ export default function HomeScreen() {
           <View style={styles.modalContainer}>
             <TouchableWithoutFeedback>
               <View style={styles.modalContent}>
-                <Text style={styles.modalTitle}>Selecteer materiaaltype</Text>
+                <Text style={styles.modalTitle}>Selecteer materiaal</Text>
                 <FlatList
                   data={materialTypes}
                   keyExtractor={(item) => item.id.toString()}
