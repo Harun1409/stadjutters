@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 40,
-    borderColor: 'black', 
+    borderColor: 'gray', 
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingRight: 40, 
@@ -694,7 +694,7 @@ const styles = StyleSheet.create({
   filterLabel: {
     flex: 1,
     height: 40,
-    borderColor: 'black',
+    borderColor: 'gray',
     borderWidth: 1,
     borderRadius: 8,
     justifyContent: 'center',

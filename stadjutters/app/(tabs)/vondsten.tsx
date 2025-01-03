@@ -1,22 +1,21 @@
-import { Image, StyleSheet, Platform, View } from 'react-native';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import React from 'react';
+import MapView from 'react-native-maps';
+import { StyleSheet, View } from 'react-native';
 
-
-export default function HomeScreen() {
+export default function App() {
   return (
-    <View style={styles.kikker}>
-      <ThemedText>Vondsten</ThemedText>
+    <View style={styles.container}>
+      <MapView style={styles.map} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  kikker: {
-    display: 'flex',
+  container: {
     flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center'
+  },
+  map: {
+    width: '100%',
+    height: '100%',
   },
 });
