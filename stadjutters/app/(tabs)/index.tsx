@@ -456,10 +456,4 @@ const styles = StyleSheet.create({
   modalList: { maxHeight: 220, 
     width: '100%', 
   },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
 });
