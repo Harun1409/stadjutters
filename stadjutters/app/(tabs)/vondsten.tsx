@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import MapView, { Region, Marker, Callout } from 'react-native-maps';
-import { StyleSheet, View, Alert, ActivityIndicator, Text, Image, ScrollView, Modal, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Alert, ActivityIndicator, Text, Image, ScrollView, Modal, TouchableOpacity, Animated } from 'react-native';
 import * as Location from 'expo-location';
 import { supabase } from '../../lib/supabase';
 
@@ -19,6 +19,7 @@ export default function App() {
   const [selectedMarker, setSelectedMarker] = useState<Finding | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [slideAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
     (async () => {
@@ -85,11 +86,11 @@ export default function App() {
     const signedUrls = await Promise.all(
       urls.map(async (url) => {
         const signedUrl = await fetchSignedUrl(url); // HAAL DE SIGNED URL OP
-        return signedUrl; // ALS ER EEN GELDIGE URL IS, VOEG DIE TOE
+        return signedUrl; 
       })
     );
     // FILTER LEGE WAARDEN (NULL) UIT DE ARRAY
-    return signedUrls.filter((url) => url !== null) as string[]; // TYPECASTING OM DE ARRAY ALS STRING[] TE BEHANDELEN
+    return signedUrls.filter((url) => url !== null) as string[]; 
   };
 
   const handleMarkerPress = async (marker: Finding) => {
@@ -97,6 +98,21 @@ export default function App() {
     setImageUrls(urls);
     setSelectedMarker(marker);
     setModalVisible(true);
+    Animated.timing(slideAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const handleCloseModal = () => {
+    Animated.timing(slideAnim, {
+      toValue: 0,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      setModalVisible(false);
+    });
   };
 
   if (loading) {
@@ -124,7 +140,6 @@ export default function App() {
               <Marker
                 key={marker.id}
                 coordinate={{ latitude, longitude }}
-                title={marker.title}
                 onPress={() => handleMarkerPress(marker)}
               />
             );
@@ -133,15 +148,17 @@ export default function App() {
       )}
       {selectedMarker && (
         <Modal
-          animationType="slide"
           transparent={true}
           visible={modalVisible}
-          onRequestClose={() => setModalVisible(false)}
+          onRequestClose={handleCloseModal}
         >
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
+          <View style={styles.modalBackground}>
+            <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [300, 0] }) }] }]}>
               <Text style={styles.modalTitle}>{selectedMarker.title}</Text>
+              <View style={styles.divider}/>
               <Text style={styles.modalDescription}>{selectedMarker.description}</Text>
+              <View style={styles.divider}/>
+
               <ScrollView horizontal>
                 {imageUrls.map((url, index) => (
                   <Image
@@ -153,11 +170,11 @@ export default function App() {
               </ScrollView>
               <TouchableOpacity
                 style={styles.closeButton}
-                onPress={() => setModalVisible(false)}
+                onPress={handleCloseModal}
               >
                 <Text style={styles.closeButtonText}>SLUITEN</Text>
               </TouchableOpacity>
-            </View>
+            </Animated.View>
           </View>
         </Modal>
       )}
@@ -174,33 +191,43 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalContainer: {
+  modalBackground: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    width: '80%',
+    width: '90%',
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 20,
     padding: 20,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
+    color: '#333',
   },
   modalDescription: {
     fontSize: 16,
     marginBottom: 10,
+    color: '#666',
+    textAlign: 'center',
   },
   modalImage: {
     width: 200,
     height: 200,
     borderRadius: 10,
     marginRight: 10,
+    borderColor: 'gray',
+    borderWidth: 1,
   },
   closeButton: {
     marginTop: 20,
@@ -212,5 +239,12 @@ const styles = StyleSheet.create({
   closeButtonText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: 'bold',
+  },
+  divider: { 
+    height: 1, 
+    backgroundColor: 'gray', 
+    width: '100%',
+    marginVertical: 10,
   },
 });
