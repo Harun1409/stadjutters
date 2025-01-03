@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import MapView, { Region, Marker, Callout } from 'react-native-maps';
-import { StyleSheet, View, Alert, ActivityIndicator, Text, Image, ScrollView, Modal, TouchableOpacity, Animated } from 'react-native';
+import { StyleSheet, View, Alert, ActivityIndicator, Text, Image, ScrollView, Modal, TouchableOpacity, Animated, TouchableWithoutFeedback, Linking } from 'react-native';
 import * as Location from 'expo-location';
 import { supabase } from '../../lib/supabase';
 
@@ -60,7 +60,6 @@ export default function App() {
     fetchMarkers();
   }, []);
 
-  // FUNCTIE VOOR HET OPHALEN VAN DE SIGNED URL
   const fetchSignedUrl = async (path: string) => {
     try {
       const { data, error } = await supabase
@@ -80,17 +79,15 @@ export default function App() {
     }
   };
 
-  // HAAL DE SIGNED URL'S VOOR DE AFBEELDINGEN OP
   const fetchImageUrls = async (imageUrls: string) => {
     const urls = imageUrls.split(',').map(url => url.trim());
     const signedUrls = await Promise.all(
       urls.map(async (url) => {
-        const signedUrl = await fetchSignedUrl(url); // HAAL DE SIGNED URL OP
-        return signedUrl; 
+        const signedUrl = await fetchSignedUrl(url);
+        return signedUrl;
       })
     );
-    // FILTER LEGE WAARDEN (NULL) UIT DE ARRAY
-    return signedUrls.filter((url) => url !== null) as string[]; 
+    return signedUrls.filter((url) => url !== null) as string[];
   };
 
   const handleMarkerPress = async (marker: Finding) => {
@@ -113,6 +110,21 @@ export default function App() {
     }).start(() => {
       setModalVisible(false);
     });
+  };
+
+  const handleDirections = (latitude: number, longitude: number) => {
+    const url = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(latitude)},${encodeURIComponent(longitude)}`;
+
+    Linking.canOpenURL(url)
+      .then((supported) => {
+        if (!supported) {
+          console.error('De URL kan niet worden geopend:', url);
+          Alert.alert('Fout', 'Kan de routebeschrijving niet openen. Controleer uw instellingen.');
+          return;
+        }
+        return Linking.openURL(url);
+      })
+      .catch((err) => console.error('Fout bij het openen van de routebeschrijving:', err));
   };
 
   if (loading) {
@@ -152,30 +164,41 @@ export default function App() {
           visible={modalVisible}
           onRequestClose={handleCloseModal}
         >
-          <View style={styles.modalBackground}>
-            <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [300, 0] }) }] }]}>
-              <Text style={styles.modalTitle}>{selectedMarker.title}</Text>
-              <View style={styles.divider}/>
-              <Text style={styles.modalDescription}>{selectedMarker.description}</Text>
-              <View style={styles.divider}/>
+          <TouchableWithoutFeedback onPress={handleCloseModal}>
+            <View style={styles.modalBackground}>
+              <TouchableWithoutFeedback>
+                <Animated.View style={[styles.modalContent, { transform: [{ translateY: slideAnim.interpolate({ inputRange: [0, 1], outputRange: [300, 0] }) }] }]}>
+                  <Text style={styles.modalTitle}>{selectedMarker.title}</Text>
+                  <View style={styles.divider}/>
+                  <Text style={styles.modalDescription}>{selectedMarker.description}</Text>
+                  <View style={styles.divider}/>
 
-              <ScrollView horizontal>
-                {imageUrls.map((url, index) => (
-                  <Image
-                    key={index}
-                    source={{ uri: url }}
-                    style={styles.modalImage}
-                  />
-                ))}
-              </ScrollView>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={handleCloseModal}
-              >
-                <Text style={styles.closeButtonText}>SLUITEN</Text>
-              </TouchableOpacity>
-            </Animated.View>
-          </View>
+                  <ScrollView horizontal>
+                    {imageUrls.map((url, index) => (
+                      <TouchableWithoutFeedback key={index}>
+                        <Image
+                          source={{ uri: url }}
+                          style={styles.modalImage}
+                        />
+                      </TouchableWithoutFeedback>
+                    ))}
+                  </ScrollView>
+                  <TouchableOpacity
+                    style={styles.closeButton}
+                    onPress={() => {
+                      const [latitude, longitude] = selectedMarker.location
+                        .replace(/[()]/g, '')
+                        .split(',')
+                        .map(Number);
+                      handleDirections(latitude, longitude);
+                    }}
+                  >
+                    <Text style={styles.closeButtonText}>ROUTEBESCHRIJVING</Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
         </Modal>
       )}
     </View>
@@ -219,7 +242,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 10,
     color: '#666',
-    textAlign: 'center',
+    //textAlign: 'center',
   },
   modalImage: {
     width: 200,
@@ -235,15 +258,17 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
+    width: '100%',
   },
   closeButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
   },
-  divider: { 
-    height: 1, 
-    backgroundColor: 'gray', 
+  divider: {
+    height: 1,
+    backgroundColor: 'gray',
     width: '100%',
     marginVertical: 10,
   },

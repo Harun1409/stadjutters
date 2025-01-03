@@ -24,7 +24,6 @@ const styles = StyleSheet.create({
   },
 });
 
-
 // import React, { useState, useEffect } from 'react';
 // import { 
 //   FlatList, 
