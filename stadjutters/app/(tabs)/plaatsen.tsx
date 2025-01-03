@@ -12,31 +12,33 @@ import {
   ScrollView,
   LogBox,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import React, { useState, useEffect } from 'react';
-import { useSession } from '../SessionContext'; // Assuming this provides session info (user ID)
-import { supabase } from '../../lib/supabase'; // Correct import from your supabase.tsx file
-import * as FileSystem from 'expo-file-system'; // Allows you to read files from the local file system
+import { useSession } from '../SessionContext'; // AANNEMEN DAT DIT SESSIE-INFORMATIE (GEBRUIKERS-ID) BIEDT
+import { supabase } from '../../lib/supabase'; // JUISTE IMPORT VANUIT JE SUPABASE.TSX-BESTAND
+import * as FileSystem from 'expo-file-system'; // STAAT JE TOE OM BESTANDEN VAN HET LOKALE BESTANDSSYSTEEM TE LEZEN
 import { Buffer } from 'buffer';
-import { DropDownSelect } from 'react-native-simple-dropdown-select'; // Assuming you have this component available
 import * as Location from 'expo-location';
+import { Ionicons } from '@expo/vector-icons'; // IMPORT IONICONS VOOR ICONEN
+import { manipulateAsync, SaveFormat } from 'expo-image-manipulator'; // VOOR HET CONVERTEREN VAN NON-JEPG AFBEELDINGEN NAAR JPEG
 
 global.Buffer = Buffer;
 
-// Suppress warnings about nested VirtualizedLists
+// WAARSCHUWINGEN OVER GENESTE VIRTUALIZEDLISTS ONDERDRUKKEN
 LogBox.ignoreLogs([
   'VirtualizedLists should never be nested inside plain ScrollViews',
 ]);
 
 export default function HomeScreen() {
-  const { session } = useSession(); // Assuming this provides session info (user ID)
+  const { session } = useSession(); // AANNEMEN DAT DIT SESSIE-INFORMATIE (GEBRUIKERS-ID) BIEDT
   const [titlePlaatsen, setTitlePlaatsen] = useState('');
   const [descriptionPlaatsen, setDescriptionPlaatsen] = useState('');
-  const [images, setImages] = useState<string[]>([]); // Array to hold multiple image URIs
-  const [uploading, setUploading] = useState(false); // Uploading state
+  const [images, setImages] = useState<string[]>([]); // ARRAY OM MEERDERE AFBEELDING-URI'S TE BEWAREN
+  const [uploading, setUploading] = useState(false); // UPLOADSTATUS
   const [openCategory, setOpenCategory] = useState(false);
-  const [valueCategory, setValueCategory] = useState<any>(null); // Selected category
+  const [valueCategory, setValueCategory] = useState<any>(null); // GESELECTEERDE CATEGORIE
   const [categories, setCategories] = useState<Category[]>([]);
   const [openMaterialType, setOpenMaterialType] = useState(false);
   const [valueMaterialType, setValueMaterialType] = useState<any>(null);
@@ -46,6 +48,8 @@ export default function HomeScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [isMaterialModalVisible, setMaterialModalVisible] = useState(false);
 
   const maxTitleLength = 50;
   const maxDescriptionLength = 500;
@@ -58,7 +62,7 @@ export default function HomeScreen() {
     if (text.length <= maxDescriptionLength) setDescriptionPlaatsen(text);
   };
 
-  // Fetch user's location if "Straatvondst" is selected
+  // GEBRUIKERSLOCATIE OPHALEN ALS "STRAATVONDST" IS GESELECTEERD
   const fetchUserLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -86,7 +90,7 @@ export default function HomeScreen() {
     ? `(${userCoordinates.latitude}, ${userCoordinates.longitude})`
     : null;
 
-  // Fetch user's city from profile
+  // STAD VAN GEBRUIKERSPROFIEL OPHALEN
   const getStadFromProfile = async () => {
     try {
       const { data, error } = await supabase
@@ -112,7 +116,7 @@ export default function HomeScreen() {
     description: string;
   }
 
-  // Retrieve categories from Supabase
+  // CATEGORIEËN OPHALEN VAN SUPABASE
   const retrieveCategories = async () => {
     const { data, error } = await supabase
       .from('category')
@@ -139,7 +143,7 @@ export default function HomeScreen() {
     description: string;
   }
 
-  // Retrieve material types from Supabase
+  // MATERIAALSOORTEN OPHALEN VAN SUPABASE
   const retrieveMaterialType = async () => {
     const { data, error } = await supabase
       .from('materialType')
@@ -161,7 +165,7 @@ export default function HomeScreen() {
     name: type.description,
   }));
 
-  // Pick images from the gallery
+  // AFBEELDINGEN KIEZEN UIT DE GALERIJ
   const pickImages = async () => {
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
@@ -172,7 +176,7 @@ export default function HomeScreen() {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      quality: 0.01, // Reduced quality for smaller image sizes
+      quality: 0.01, // GEREDUCEERDE KWALITEIT VOOR KLEINERE AFBEELDINGSGROOTTES
       selectionLimit: 3,
     });
 
@@ -182,7 +186,7 @@ export default function HomeScreen() {
     }
   };
 
-  // Take a photo with the camera
+  // EEN FOTO MAKEN MET DE CAMERA
   const takePhoto = async () => {
     if (images.length >= 3) {
       alert('Je kunt maximaal 3 afbeeldingen selecteren.');
@@ -210,7 +214,7 @@ export default function HomeScreen() {
     setImages(images.filter((image) => image !== uri));
   };
 
-  // Upload data to Supabase
+  // GEGEVENS UPLOADEN NAAR SUPABASE
   const uploadToDatabase = async () => {
     if (!titlePlaatsen) {
       alert('Geef een titel op om door te kunnen gaan');
@@ -237,45 +241,54 @@ export default function HomeScreen() {
       return;
     }
 
+
+
     setUploading(true);
     try {
       const urls: string[] = [];
       for (const image of images) {
         const fileName = image.split('/').pop();
-        const fileExt = fileName?.split('.').pop() || 'jpeg';
+        const fileExt = 'jpeg';  // Convert all images to JPEG
         const filePath = `public/${Date.now()}_${Math.random()
           .toString(36)
           .substr(2, 5)}.${fileExt}`;
-
-        const fileContent = await FileSystem.readAsStringAsync(image, {
+    
+        // Convert image to JPEG
+        const manipulatedImage = await manipulateAsync(
+          image,
+          [{ resize: { width: 1024 } }],  // Optional: resize the image
+          { compress: 1, format: SaveFormat.JPEG }
+        );
+    
+        const fileContent = await FileSystem.readAsStringAsync(manipulatedImage.uri, {
           encoding: FileSystem.EncodingType.Base64,
         });
-
+    
         const buffer = Buffer.from(fileContent, 'base64');
-
+    
         const { data, error } = await supabase.storage
           .from('UserUploadedImages')
           .upload(filePath, buffer, {
-            contentType: `image/${fileExt}`,
+            contentType: `image/${fileExt}`,  // Content type is now always JPEG
             cacheControl: '3600',
             upsert: false,
           });
-
+    
         if (error) throw error;
-
+    
         const publicUrl = supabase.storage
           .from('UserUploadedImages')
           .getPublicUrl(filePath).data.publicUrl;
         urls.push(publicUrl.split('/').pop() || '');
       }
-
+    
       const stad = await getStadFromProfile();
-
+    
       if (!stad) {
         alert('Geef een woonplaats op in je account om door te kunnen gaan');
         return;
       }
-
+    
       const { error: dbError } = await supabase
         .from('findings')
         .insert([
@@ -291,9 +304,9 @@ export default function HomeScreen() {
             location: location,
           },
         ]);
-
+    
       if (dbError) throw dbError;
-
+    
       alert('Vondst succesvol geplaatst!');
       setImages([]);
       onChangeTitle('');
@@ -306,145 +319,132 @@ export default function HomeScreen() {
     } finally {
       setUploading(false);
     }
+    
   };
-  
+
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.tilesContainer}>
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              onChangeText={onChangeTitle}
-              value={titlePlaatsen}
-              placeholder="Titel"
-            />
-            <Text style={styles.counter}>
-              {titlePlaatsen.length}/{maxTitleLength}
-            </Text>
-          </View>
-  
-          {/* Description Input */}
-          <View style={styles.inputContainer}>
-            <TextInput
-              editable
-              multiline
-              style={[styles.input, styles.inputDescription]}
-              onChangeText={onChangeDescription}
-              value={descriptionPlaatsen}
-              placeholder="Beschrijving"
-            />
-            <Text style={styles.counter}>
-              {descriptionPlaatsen.length}/{maxDescriptionLength}
-            </Text>
-          </View>
-          <View style={styles.dropDownStyle}>
-            <View style={styles.dropDownContainer}>
-              <DropDownSelect
-                placeholder="Categorie"
-                toggle={() => setOpenCategory(!openCategory)}
-                selectedData={valueCategory}
-                open={openCategory}
-                data={categoryOptions}
-                onSelect={(data) => {
-                  setValueCategory(data);
-                  setOpenCategory(false);
-                }}
-                dropDownContainerStyle={{
-                  maxHeight: 130,
-                  minWidth: 100,
-                  borderWidth: 0.5,
-                  borderColor: 'lightgray',
-                  borderRadius: 8,
-                  padding: 10,
-                }}
-                search
-              />
-            </View>
-            <View style={styles.dropDownContainer}>
-              <DropDownSelect
-                placeholder="Materiaaltype"
-                toggle={() => setOpenMaterialType(!openMaterialType)}
-                selectedData={valueMaterialType}
-                open={openMaterialType}
-                data={materialTypeOptions}
-                onSelect={(data) => {
-                  setValueMaterialType(data);
-                  setOpenMaterialType(false);
-                }}
-                dropDownContainerStyle={{
-                  maxHeight: 130,
-                  minWidth: 100,
-                  borderWidth: 0.5,
-                  borderColor: 'lightgray',
-                  borderRadius: 8,
-                  padding: 10,
-                }}
-                search
-              />
-            </View>
-          </View>
-  
-          <View style={styles.segmentedControlWrapper}>
+        <View style={styles.inputContainer}>
+          <TextInput
+            style={styles.input}
+            onChangeText={onChangeTitle}
+            value={titlePlaatsen}
+            placeholder="Titel"
+          />
+          <Text style={styles.counter}>
+            {titlePlaatsen.length}/{maxTitleLength}
+          </Text>
+        </View>
+
+        {/* BESCHRIJVING INVOEREN */}
+        <View style={styles.inputContainer}>
+          <TextInput
+            editable
+            multiline
+            style={[styles.input, styles.inputDescription]}
+            onChangeText={onChangeDescription}
+            value={descriptionPlaatsen}
+            placeholder="Beschrijving"
+          />
+          <Text style={styles.counter}>
+            {descriptionPlaatsen.length}/{maxDescriptionLength}
+          </Text>
+        </View>
+
+        {/* CATEGORIE DROPDOWN */}
+        <View style={styles.filterContainer}>
+          <View style={styles.filterLabelContainer}>
             <TouchableOpacity
-              style={[
-                styles.segmentButton,
-                selectedFindingType === 'Huisvondst' && styles.activeSegmentButton,
-              ]}
-              onPress={() => setSelectedFindingType('Huisvondst')}
+              onPress={() => setCategoryModalVisible(true)}
+              style={[styles.filterLabel, {marginRight: 5}]}
             >
-              <Text
-                style={[
-                  styles.segmentButtonText,
-                  selectedFindingType === 'Huisvondst' && styles.activeSegmentButtonText,
-                ]}
-              >
-                Huisvondst
-              </Text>
+              <Text style={styles.filterLabelText}>{valueCategory?.description || 'Selecteer categorie'}</Text>
             </TouchableOpacity>
+            {valueCategory ? (
+              <TouchableOpacity onPress={() => setValueCategory(null)} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="gray" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+
+          {/* MATERIAALSOORT DROPDOWN */}
+          <View style={styles.filterLabelContainer}>
             <TouchableOpacity
-              style={[
-                styles.segmentButton,
-                selectedFindingType === 'Straatvondst' && styles.activeSegmentButton,
-              ]}
-              onPress={handleStraatvondstSelection}
+              onPress={() => setMaterialModalVisible(true)}
+              style={[styles.filterLabel, {marginLeft: 5}]}
             >
-              <Text
-                style={[
-                  styles.segmentButtonText,
-                  selectedFindingType === 'Straatvondst' && styles.activeSegmentButtonText,
-                ]}
-              >
-                Straatvondst
-              </Text>
+              <Text style={styles.filterLabelText}>{valueMaterialType?.description || 'Selecteer materiaaltype'}</Text>
+            </TouchableOpacity>
+            {valueMaterialType ? (
+              <TouchableOpacity onPress={() => setValueMaterialType(null)} style={styles.clearButton}>
+                <Ionicons name="close-circle" size={20} color="gray" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        </View>
+
+        <View style={styles.segmentedControlWrapper}>
+          <TouchableOpacity
+            style={[
+              styles.segmentButton,
+              selectedFindingType === 'Huisvondst' && styles.activeSegmentButton,
+            ]}
+            onPress={() => setSelectedFindingType('Huisvondst')}
+          >
+            <Text
+              style={[
+                styles.segmentButtonText,
+                selectedFindingType === 'Huisvondst' && styles.activeSegmentButtonText,
+              ]}
+            >
+              Huisvondst
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.segmentButton,
+              selectedFindingType === 'Straatvondst' && styles.activeSegmentButton,
+            ]}
+            onPress={handleStraatvondstSelection}
+          >
+            <Text
+              style={[
+                styles.segmentButtonText,
+                selectedFindingType === 'Straatvondst' && styles.activeSegmentButtonText,
+              ]}
+            >
+              Straatvondst
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.dropDownStyle}>
+          <View style={styles.dropDownContainer}>
+            <TouchableOpacity style={[styles.customButton, {marginRight: 5}]} onPress={pickImages}>
+              <Text style={styles.buttonText}>Foto uit gallerij</Text>
             </TouchableOpacity>
           </View>
-  
-          <View style={styles.dropDownStyle}>
-            <View style={styles.dropDownContainer}>
-              <TouchableOpacity style={styles.customButton} onPress={pickImages}>
-                <Text style={styles.buttonText}>Foto uit gallerij</Text>
+          <View style={styles.dropDownContainer}>
+            <TouchableOpacity style={[styles.customButton, {marginLeft: 5}]} onPress={takePhoto}>
+              <Text style={styles.buttonText}>Maak foto</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View style={styles.imageContainer}>
+          {images.map((uri, index) => (
+            <View key={index} style={styles.imageWrapper}>
+              <Image source={{ uri }} style={styles.image} />
+              <TouchableOpacity
+                onPress={() => removeImage(uri)}
+                style={styles.removeButton}
+              >
+                <Text style={styles.removeButtonText}>X</Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.dropDownContainer}>
-              <TouchableOpacity style={styles.customButton} onPress={takePhoto}>
-                <Text style={styles.buttonText}>Maak foto</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-  
-          <View style={styles.imageContainer}>
-            {images.map((uri, index) => (
-              <View key={index} style={styles.imageWrapper}>
-                <Image source={{ uri }} style={styles.image} />
-                <TouchableOpacity
-                  onPress={() => removeImage(uri)}
-                  style={styles.removeButton}
-                >
-                  <Text style={styles.removeButtonText}>X</Text>
-                </TouchableOpacity>
-              </View>
-            ))}
-          </View>
+          ))}
+        </View>
       </ScrollView>
       <View style={styles.bottomButtonContainer}>
         <TouchableOpacity
@@ -457,9 +457,66 @@ export default function HomeScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* CATEGORIE MODAL */}
+      <Modal visible={isCategoryModalVisible} transparent={true}>
+        <TouchableWithoutFeedback onPress={() => setCategoryModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecteer categorie</Text>
+                <FlatList
+                  data={categories}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setValueCategory(item);
+                        setCategoryModalVisible(false);
+                      }}
+                      style={styles.modalItem}
+                    >
+                      <Text style={{fontSize: 20}}>{item.description}</Text>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.modalList}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* MATERIAALSOORT MODAL */}
+      <Modal visible={isMaterialModalVisible} transparent={true}>
+        <TouchableWithoutFeedback onPress={() => setMaterialModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecteer materiaaltype</Text>
+                <FlatList
+                  data={materialTypes}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setValueMaterialType(item);
+                        setMaterialModalVisible(false);
+                      }}
+                      style={styles.modalItem}
+                    >
+                      <Text style={{fontSize: 20}}>{item.description}</Text>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.modalList}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </View>
   );
-  
 }
 
 const styles = StyleSheet.create({
@@ -477,8 +534,8 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 40,
-    borderColor: 'lightgray',
-    borderWidth: 0.5,
+    borderColor: 'gray', 
+    borderWidth: 1,
     paddingHorizontal: 8,
     paddingRight: 40, 
     borderRadius: 5, 
@@ -508,14 +565,28 @@ const styles = StyleSheet.create({
   },
   dropDownStyle: {
     flexDirection: 'row',
-    width: '100%',
+    width: '95%',
     marginVertical: 10, 
     alignItems: 'center',
-    justifyContent: 'center'
+    justifyContent: 'center',
   },
   dropDownContainer: {
-    marginHorizontal: 5, 
-    width: '46%'
+    flex: 1,
+    maxWidth: '50%', 
+  },
+  dropDownButton: {
+    height: 40,
+    borderColor: 'black',
+    borderWidth: 1,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    backgroundColor: '#f0f0f0',
+    flex: 1, 
+  },
+  dropDownButtonText: {
+    color: '#333',
   },
   segmentedControlWrapper: {
     width: '95%',
@@ -619,5 +690,62 @@ const styles = StyleSheet.create({
     width: '100%',
     padding: 10,
     borderColor: 'lightgray'
+  },
+  filterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '95%',
+    marginVertical: 10,
+  },
+  filterLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  filterLabel: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    backgroundColor: '#f0f0f0',
+  },
+  filterLabelText: {
+    textAlign: 'center',
+  },
+  clearButton: {
+    marginHorizontal: 5,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end', 
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContent: {
+    width: '100%', 
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    alignItems: 'center',
+    maxHeight: '35%', 
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 20,
+  },
+  modalItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 0,
+    borderBottomColor: '#ccc',
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalList: {
+    width: '100%',
   },
 });
