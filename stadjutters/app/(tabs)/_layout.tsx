@@ -1,122 +1,144 @@
-import {Tabs} from 'expo-router';
-import React, {useState} from 'react';
-import {Platform, View, StyleSheet, TouchableOpacity} from 'react-native';
-import {HapticTab} from '@/components/HapticTab';
-import {IconSymbol} from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
-import {Colors} from '@/constants/Colors';
-import {useColorScheme} from '@/hooks/useColorScheme';
+import React, {useEffect, useState} from 'react';
+import { Platform, View, StyleSheet, TouchableOpacity } from 'react-native';
+import { Tabs } from 'expo-router';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import { BottomTabNavigationOptions } from '@react-navigation/bottom-tabs';
+import { HapticTab } from '@/components/HapticTab';
+import TabBarBackground from '@/components/ui/TabBarBackground';
 import Menu from '../menu';
-
+import { supabase } from '@/lib/supabase';
+import { Text } from 'react-native';
 
 export default function TabLayout() {
-    const colorScheme = useColorScheme();
     const [menuVisible, setMenuVisible] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
-    const openMenu = () => {
-        setMenuVisible(true);
+    const openMenu = () => setMenuVisible(true);
+    const closeMenu = () => setMenuVisible(false);
+
+    const commonScreenOptions: BottomTabNavigationOptions = {
+        headerStyle: {
+            backgroundColor: 'whitesmoke',
+            borderBottomWidth: 1,
+            borderBottomColor: 'lightgray',
+        },
+        tabBarActiveTintColor: '#7A3038',
+        tabBarButton: HapticTab,
+        tabBarBackground: TabBarBackground,
+        tabBarStyle: Platform.select({
+            default: {},
+        }),
     };
 
-    const closeMenu = () => {
-        setMenuVisible(false);
-    };
+    // Fetch unread messages count
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            const { data, error } = await supabase
+                .from('chatmessage')
+                .select('id', { count: 'exact' })
+                .eq('is_read', false)
+                .eq('receiver_id', 'current_user_id'); // Replace with your user's ID dynamically
+
+            if (!error) {
+                setUnreadCount(data.length || 0);
+            }
+        };
+
+        fetchUnreadCount();
+
+        // Optionally subscribe to real-time changes
+        const subscription = supabase
+            .channel('realtime-chats')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chatmessage' }, () => {
+                fetchUnreadCount();
+            })
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, []);
+
+    // Custom tab icon for Chats with notification blip
+    const ChatsTabIcon = ({ color, focused }: { color: string; focused: boolean }) => (
+        <View>
+            <Icon name="message" size={28} color={color} />
+            {unreadCount > 0 && !focused && (
+                <View style={styles.notificationBlip}>
+                    <Text style={styles.notificationText}>{unreadCount}</Text>
+                </View>
+            )}
+        </View>
+    );
 
     return (
         <View style={styles.container}>
+            {/* Overlay voor het menu */}
             {menuVisible && (
                 <View style={styles.overlay}>
-                    <TouchableOpacity style={styles.overlayTouchable} onPress={closeMenu}/>
-                    <Menu visible={menuVisible} closeMenu={closeMenu}/>
+                    <TouchableOpacity style={styles.overlayTouchable} onPress={closeMenu} />
+                    <Menu visible={menuVisible} closeMenu={closeMenu} />
                 </View>
             )}
-            {!menuVisible && <Menu visible={menuVisible} closeMenu={closeMenu}/>}
+            {/* Tabs Configuratie */}
             <Tabs
                 screenOptions={{
-                    tabBarActiveTintColor: '#7A3038',
-                    headerShown: true,
+                    ...commonScreenOptions,
                     headerTitleAlign: 'center',
-                    tabBarButton: HapticTab,
-                    tabBarBackground: TabBarBackground,
-                    tabBarStyle: Platform.select({
-                        ios: {
-                            position: 'absolute',
-                        },
-                        default: {},
-                    }),
                     headerRight: () => (
                         <Icon
-                            size={28} name="account"
+                            name="account"
+                            size={28}
+                            color="#7A3038"
+                            style={styles.headerIcon}
                             onPress={openMenu}
-                            style={{color: '#7A3038', marginRight: 10}}/>
+                        />
                     ),
                 }}
             >
-                <Tabs.Screen
-                    name="index"
-                    options={{
+                {[
+                    {
+                        name: 'index',
                         title: 'Home',
-                        headerTitle: 'Home',
-                        headerStyle: {
-                            backgroundColor: 'whitesmoke', // Background color of the header
-                            borderBottomWidth: 1, // Add top border width
-                            borderBottomColor: 'lightgray', // Specify the border color
-                        },
-                        tabBarIcon: ({color}) => <Icon size={28} name="home" color={color}/>,
-                    }}
-                />
-                <Tabs.Screen
-                    name="vondsten"
-                    options={{
+                        icon: 'home',
+                    },
+                    {
+                        name: 'vondsten',
                         title: 'Vondsten',
-                        headerTitle: 'Vondsten',
-                        headerStyle: {
-                            backgroundColor: 'whitesmoke', // Background color of the header
-                            borderBottomWidth: 1, // Add top border width
-                            borderBottomColor: 'lightgray', // Specify the border color
-                        },
-                        tabBarIcon: ({color}) => <Icon size={28} name="map-marker" color={color}/>,
-                    }}
-                />
-                <Tabs.Screen
-                    name="plaatsen"
-                    options={{
+                        icon: 'map-marker',
+                    },
+                    {
+                        name: 'plaatsen',
                         title: 'Plaatsen',
-                        headerTitle: 'Plaatsen',
-                        headerStyle: {
-                            backgroundColor: 'whitesmoke', // Background color of the header
-                            borderBottomWidth: 1, // Add top border width
-                            borderBottomColor: 'lightgray', // Specify the border color
-                        },
-                        tabBarIcon: ({color}) => <Icon size={28} name="plus" color={color}/>,
-                    }}
-                />
-                <Tabs.Screen
-                    name="chats"
-                    options={{
+                        icon: 'plus',
+                    },
+                    {
+                        name: 'chats',
                         title: 'Chats',
-                        headerTitle: 'Chats',
-                        headerStyle: {
-                            backgroundColor: 'whitesmoke', // Background color of the header
-                            borderBottomWidth: 1, // Add top border width
-                            borderBottomColor: 'lightgray', // Specify the border color
-                        },
-                        tabBarIcon: ({color}) => <Icon size={28} name="message" color={color}/>,
-                    }}
-                />
-                <Tabs.Screen
-                    name="meldingen"
-                    options={{
+                        icon: 'message',
+                        customIcon: ChatsTabIcon, // Add custom icon for Chats
+                    },
+                    {
+                        name: 'meldingen',
                         title: 'Meldingen',
-                        headerTitle: 'Meldingen',
-                        headerStyle: {
-                            backgroundColor: 'whitesmoke', // Background color of the header
-                            borderBottomWidth: 1, // Add top border width
-                            borderBottomColor: 'lightgray', // Specify the border color
-                        },
-                        tabBarIcon: ({color}) => <Icon size={28} name="bell" color={color}/>,
-                    }}
-                />
+                        icon: 'bell',
+                    },
+                ].map((tab) => (
+                    <Tabs.Screen
+                        key={tab.name}
+                        name={tab.name}
+                        options={{
+                            title: tab.title,
+                            headerTitle: tab.title,
+                            // tabBarIcon: ({ color }) => (
+                            //     <Icon name={tab.icon} size={28} color={color} />
+                            // ),
+                            tabBarIcon: tab.customIcon
+                                ? (props) => tab.customIcon(props)
+                                : ({ color }) => <Icon name={tab.icon} size={28} color={color} />,
+                        }}
+                    />
+                ))}
             </Tabs>
         </View>
     );
@@ -133,5 +155,24 @@ const styles = StyleSheet.create({
     },
     overlayTouchable: {
         ...StyleSheet.absoluteFillObject,
+    },
+    headerIcon: {
+        marginRight: 10,
+    },
+    notificationBlip: {
+        position: 'absolute',
+        top: -4,
+        right: -4,
+        backgroundColor: '#7a1818',
+        borderRadius: 12,
+        width: 16,
+        height: 16,
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    notificationText: {
+        color: '#fff',
+        fontSize: 10,
+        fontWeight: 'bold',
     },
 });
