@@ -1,6 +1,7 @@
 // /apps/(tabs)/chats.tsx
 import {StyleSheet, View, Pressable, Text, FlatList} from 'react-native';
 import React, { useEffect, useState } from 'react';
+import {useNavigation} from '@react-navigation/native'; // Import navigation hook
 import {useSession} from '@/app/SessionContext';
 import {useRouter} from 'expo-router';
 import { supabase } from '@/lib/supabase';
@@ -278,7 +279,7 @@ export default function ChatsScreen() {
         return (
             <View style={[styles.chatWrapper, { backgroundColor: isUnread ? '#fff' : '#f5f5f5' }]}>
             <Pressable
-                onPress={() => router.push(`/chats/${item.id}`)}
+                onPress={() => router.push(`/chats/${item.id}` as any)}
                 style={[
                     styles.chatPreview,
                     // { backgroundColor: isUnread ? '#fff' : '#f5f5f5' },
