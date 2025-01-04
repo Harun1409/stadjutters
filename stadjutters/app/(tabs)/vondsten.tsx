@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import MapView, { Region, Marker, Callout } from 'react-native-maps';
-import { StyleSheet, View, Alert, ActivityIndicator, Text, Image, ScrollView, Modal, TouchableOpacity, Animated, TouchableWithoutFeedback, Linking } from 'react-native';
+import { StyleSheet, View, Alert, ActivityIndicator, Text, Image, ScrollView, Modal, TouchableOpacity, Animated, TouchableWithoutFeedback, Linking, TextInput, FlatList } from 'react-native';
 import * as Location from 'expo-location';
 import { supabase } from '../../lib/supabase';
+import { Ionicons } from '@expo/vector-icons';
 
 interface Finding {
   id: string;
@@ -15,10 +16,12 @@ interface Finding {
 }
 
 interface Category {
+  id: string;
   description: string;
 }
 
 interface MaterialType {
+  id: string;
   description: string;
 }
 
@@ -32,6 +35,13 @@ export default function App() {
   const [categoryDescription, setCategoryDescription] = useState<string>('');
   const [materialTypeDescription, setMaterialTypeDescription] = useState<string>('');
   const [slideAnim] = useState(new Animated.Value(0));
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('');
+  const [selectedMaterial, setSelectedMaterial] = useState<string>('');
+  const [isCategoryModalVisible, setCategoryModalVisible] = useState(false);
+  const [isMaterialModalVisible, setMaterialModalVisible] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
 
   useEffect(() => {
     (async () => {
@@ -55,10 +65,24 @@ export default function App() {
 
   useEffect(() => {
     const fetchMarkers = async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('findings')
         .select('id, title, description, location, image_url, categoryId, materialTypeId')
         .eq('findingTypeId', 'Straatvondst');
+
+      if (searchQuery) {
+        query = query.ilike('title', `%${searchQuery}%`);
+      }
+
+      if (selectedCategory) {
+        query = query.eq('categoryId', selectedCategory);
+      }
+
+      if (selectedMaterial) {
+        query = query.eq('materialTypeId', selectedMaterial);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('FOUT BIJ HET OPHALEN VAN MARKERS:', error);
@@ -70,6 +94,35 @@ export default function App() {
     };
 
     fetchMarkers();
+  }, [searchQuery, selectedCategory, selectedMaterial]);
+
+  useEffect(() => {
+    const retrieveCategories = async () => {
+      const { data, error } = await supabase
+        .from('category')
+        .select('id, description');
+
+      if (error) {
+        console.error('FOUT BIJ HET OPHALEN VAN CATEGORIEËN:', error);
+        return;
+      }
+      setCategories(data || []);
+    };
+
+    const retrieveMaterialTypes = async () => {
+      const { data, error } = await supabase
+        .from('materialType')
+        .select('id, description');
+
+      if (error) {
+        console.error('FOUT BIJ HET OPHALEN VAN MATERIAALSOORTEN:', error);
+        return;
+      }
+      setMaterialTypes(data || []);
+    };
+
+    retrieveCategories();
+    retrieveMaterialTypes();
   }, []);
 
   const fetchSignedUrl = async (path: string) => {
@@ -178,7 +231,7 @@ export default function App() {
     <View style={styles.container}>
       {location && (
         <MapView
-          style={StyleSheet.absoluteFill}
+          style={styles.map}
           initialRegion={location}
           showsUserLocation
         >
@@ -197,6 +250,97 @@ export default function App() {
           })}
         </MapView>
       )}
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <TextInput
+          style={styles.searchBar}
+          placeholder="Zoek op titel..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        <TouchableOpacity style={styles.searchIcon}>
+          <Ionicons name="search" size={24} color="gray" />
+        </TouchableOpacity>
+      </View>
+      {/* Filter Labels */}
+      <View style={styles.filterContainer}>
+        <View style={styles.filterLabelContainer}>
+          <TouchableOpacity onPress={() => setCategoryModalVisible(true)} style={[styles.filterLabel, {marginRight: 5}]}>
+            <Text>{categories.find(cat => cat.id === selectedCategory)?.description || 'Selecteer categorie'}</Text>
+          </TouchableOpacity>
+          {selectedCategory ? (
+            <TouchableOpacity onPress={() => setSelectedCategory('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="gray" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+        <View style={styles.filterLabelContainer}>
+          <TouchableOpacity onPress={() => setMaterialModalVisible(true)} style={[styles.filterLabel, {marginLeft: 5}]}>
+            <Text>{materialTypes.find(mat => mat.id === selectedMaterial)?.description || 'Selecteer materiaal'}</Text>
+          </TouchableOpacity>
+          {selectedMaterial ? (
+            <TouchableOpacity onPress={() => setSelectedMaterial('')} style={styles.clearButton}>
+              <Ionicons name="close-circle" size={20} color="gray" />
+            </TouchableOpacity>
+          ) : null}
+        </View>
+      </View>
+      {/* Category Modal */}
+      <Modal visible={isCategoryModalVisible} transparent={true}>
+        <TouchableWithoutFeedback onPress={() => setCategoryModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecteer categorie</Text>
+                <FlatList
+                  data={categories}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedCategory(item.id);
+                        setCategoryModalVisible(false);
+                      }}
+                      style={styles.modalItem}
+                    >
+                      <Text style={{fontSize: 20}}>{item.description}</Text>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.modalList}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+      {/* Material Modal */}
+      <Modal visible={isMaterialModalVisible} transparent={true}>
+        <TouchableWithoutFeedback onPress={() => setMaterialModalVisible(false)}>
+          <View style={styles.modalContainer}>
+            <TouchableWithoutFeedback>
+              <View style={styles.modalContent}>
+                <Text style={styles.modalTitle}>Selecteer materiaal</Text>
+                <FlatList
+                  data={materialTypes}
+                  keyExtractor={(item) => item.id.toString()}
+                  renderItem={({ item }) => (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedMaterial(item.id);
+                        setMaterialModalVisible(false);
+                      }}
+                      style={styles.modalItem}
+                    >
+                      <Text style={{fontSize: 20}}>{item.description}</Text>
+                    </TouchableOpacity>
+                  )}
+                  style={styles.modalList}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
       {selectedMarker && (
         <Modal
           transparent={true}
@@ -256,9 +400,64 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modalBackground: {
+  searchContainer: {
+    position: 'absolute',
+    top: 10,
+    left: '2.5%',
+    right: '2.5%',
+    flexDirection: 'row',
+    zIndex: 1, 
+  },
+  searchBar: {
     flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff',
+  },
+  searchIcon: {
+    height: 40,
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    position: 'absolute',
+    right: 10,
+  },
+  filterContainer: {
+    position: 'absolute',
+    top: 60,
+    left: '2.5%',
+    right: '2.5%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 1,
+  },
+  filterLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  filterLabel: {
+    flex: 1,
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+  },
+  clearButton: {
+    marginHorizontal: 5,
+  },
+  map: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end', 
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
@@ -279,6 +478,22 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     color: '#333',
     textAlign: 'center',
+  },
+  modalItem: {
+    paddingVertical: 10,
+    borderBottomWidth: 0,
+    borderBottomColor: '#ccc',
+    width: '100%',
+    alignItems: 'center',
+  },
+  modalList: {
+    width: '100%',
+  },
+  modalBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalDescription: {
     fontSize: 16,

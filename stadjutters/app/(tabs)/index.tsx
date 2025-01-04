@@ -14,11 +14,11 @@ import {
   TouchableWithoutFeedback 
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
-import { Link } from 'expo-router';  // Use Link from expo-router
-import { Ionicons } from '@expo/vector-icons'; // Import Ionicons for icons
+import { Link } from 'expo-router';  
+import { Ionicons } from '@expo/vector-icons'; 
 
 interface Finding {
-  id: string; // Unique identifier
+  id: string;
   title: string;
   stad: string;
   image_url: string | null;
@@ -34,7 +34,7 @@ interface MaterialType {
   description: string;
 }
 
-const PAGE_SIZE = 15; // Number of items to load per page
+const PAGE_SIZE = 15; 
 
 const fetchFindings = async (
   page: number,
@@ -218,7 +218,7 @@ export default function HomeScreen() {
       <View style={styles.searchContainer}>
         <TextInput
           style={styles.searchBar}
-          placeholder="Search..."
+          placeholder="Zoek op titel..."
           value={searchQuery}
           onChangeText={setSearchQuery}
           onSubmitEditing={handleSearch} // ZOEKOPDRACHT UITVOEREN BIJ ENTER
@@ -389,12 +389,12 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    justifyContent: 'flex-end', // Align modal at the bottom
+    justifyContent: 'flex-end', 
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   modalContent: {
-    width: '100%', // Full width
+    width: '100%', 
     backgroundColor: '#fff',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
