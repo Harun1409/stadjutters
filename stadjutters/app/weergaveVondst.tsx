@@ -3,18 +3,18 @@ import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Dimensions,
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; //https://static.enapter.com/rn/icons/material-community.html
-import { useSession } from './SessionContext'; // Ensure this is the correct path and provides session info
-import { useNavigation } from '@react-navigation/native'; // Import useNavigation
+import { useSession } from './SessionContext';
+import { useNavigation } from '@react-navigation/native'; 
 
 interface FindingDetails {
   title: string;
   stad: string;
   description: string;
-  image_urls: string[]; // Array of image URLs
+  image_urls: string[]; // ARRAY VAN URLS
   categoryId: string;
-  categoryDescription: string; // Category description
+  categoryDescription: string; // CATEGORIE BESCHRIJVING
   materialTypeId: string;
-  materialTypeDescription: string; // Material type description
+  materialTypeDescription: string; // MATERIAAL TYPE BESCHRIJVING
   findingTypeId: string;
   uid: string;
 }
@@ -25,29 +25,30 @@ export default function WeergaveVondst() {
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
-  const { session } = useSession(); // Ensure this hook provides session info
-  const navigation = useNavigation(); // Initialize navigation
+  const [isSaved, setIsSaved] = useState(false); // OPSLAAN KNOP
+  const { session } = useSession(); // SESSION INFO VERKRIJGEN
+  const navigation = useNavigation(); // INITIALISATIE NAVIGATIE
 
   useEffect(() => {
-    console.log('uid:', session?.user?.id); // Log the user ID to verify
+    console.log('uid:', session?.user?.id); // USER ID IDENTIFICEREN
     const fetchFindingDetails = async () => {
       try {
-        // Fetch finding details
+        // FETCH VONDSTEN DETAILS
         const { data, error } = await supabase
           .from('findings')
-          .select('title, stad, description, image_url, categoryId, materialTypeId, findingTypeId, uid') // Include all fields
+          .select('title, stad, description, image_url, categoryId, materialTypeId, findingTypeId, uid') 
           .eq('id', id)
           .single();
 
         if (error) {
-          console.error('Error fetching finding details:', error);
+          console.error('Error bij verkrijgen vondsten:', error);
           return;
         }
 
-        // Split image_url into an array of URLs
+        // IMAGE URL SPLITTEN IN MEERDERE
         const imageUrls = data?.image_url ? data.image_url.split(',').map((url: string) => url.trim()) : [];
 
-        // Generate signed URLs for all images
+        // CUSTOM URL GENEREREN
         const signedUrls = await Promise.all(
           imageUrls.map(async (url: string) => {
             if (!url) return null;
@@ -56,7 +57,7 @@ export default function WeergaveVondst() {
           })
         );
 
-        // Fetch category description
+        // CATEGORIE BESCHRIJVING OPHALEN
         const { data: categoryData, error: categoryError } = await supabase
           .from('category')
           .select('description')
@@ -64,10 +65,10 @@ export default function WeergaveVondst() {
           .single();
 
         if (categoryError) {
-          console.error('Error fetching category description:', categoryError);
+          console.error('Error verkrijgen categorie description:', categoryError);
         }
 
-        // Fetch material type description
+        // MATERIAAL TYPE VERKRIJGEN
         const { data: materialTypeData, error: materialTypeError } = await supabase
           .from('materialType')
           .select('description')
@@ -75,25 +76,39 @@ export default function WeergaveVondst() {
           .single();
 
         if (materialTypeError) {
-          console.error('Error fetching material type description:', materialTypeError);
+          console.error('Error verkrijgen materiaal description:', materialTypeError);
         }
 
-        // Set state with fetched data
+        // OPGEHAALDE DATA GEBRUIKEN
         setFinding({
           ...data,
           image_urls: signedUrls.filter(Boolean), // Filter out any null signed URLs
-          categoryDescription: categoryData?.description || 'No category description available',
-          materialTypeDescription: materialTypeData?.description || 'No material type description available',
+          categoryDescription: categoryData?.description || 'geen categorie description beschikbaar',
+          materialTypeDescription: materialTypeData?.description || 'geen materiaal description beschikbaar',
         });
+
+        // CHECK OF VONDST AL OPGESLAGEN IS
+        const { data: savedData, error: savedError } = await supabase
+          .from('savedFindings')
+          .select('id')
+          .eq('uid', session?.user?.id)
+          .eq('finding_id', id)
+          .single();
+
+        if (savedError && savedError.code !== 'PGRST116') {
+          console.error('Error checken opgeslagen vondsten:', savedError);
+        } else if (savedData) {
+          setIsSaved(true);
+        }
       } catch (error) {
-        console.error('Unexpected error fetching finding details:', error);
+        console.error('Unexpected error verkrijgen vondsten details:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchFindingDetails();
-  }, [id, session?.user?.id]); // Add session user ID as a dependency
+  }, [id, session?.user?.id]); // USER ID ALS DEPENDECY
 
   const fetchSignedUrl = async (path: string) => {
     try {
@@ -103,13 +118,13 @@ export default function WeergaveVondst() {
         .createSignedUrl(path, 60);
 
       if (error) {
-        console.error('Error creating signed URL:', error);
+        console.error('Error bij maken van custom URL:', error);
         return null;
       }
 
       return data.signedUrl;
     } catch (error) {
-      console.error('Unexpected error creating signed URL:', error);
+      console.error('Unexpected error bij maken van custom URL:', error);
       return null;
     }
   };
@@ -127,45 +142,90 @@ export default function WeergaveVondst() {
           text: "Verwijderen",
           onPress: async () => {
             try {
-              // Delete images from storage
+              // IMAGES VERWIJDEREN VAN STORAGE
               if (finding?.image_urls) {
                 const deletePromises = finding.image_urls.map(async (url) => {
-                  const path = url.split('?')[0].split('/').slice(-2).join('/'); // Extract the correct path from the URL and remove query parameters
-                  console.log('Deleting image from storage:', path);
+                  const path = url.split('?')[0].split('/').slice(-2).join('/'); // CORRECTE URL VERKRIJGEN 
+                  const cleanPath = path.replace('public/', ''); 
+                  console.log('verwijderen image van storage:', cleanPath);
                   const { error } = await supabase
                     .storage
                     .from('UserUploadedImages')
-                    .remove([path]);
-                    console.log('HK: deleted from storage: ', [path]);
+                    .remove([cleanPath]);
+
                   if (error) {
-                    console.error('Error deleting image from storage:', error);
+                    console.error('verwijderen image van storage error:', error);
+                  } else {
+                    console.log('image verwijderd van storage:', cleanPath);
                   }
                 });
                 await Promise.all(deletePromises);
               }
 
-              // Delete finding from database
+              // VONDST VERWIJDEREN VAN DATABASE
               const { error } = await supabase
                 .from('findings')
                 .delete()
                 .eq('id', id);
 
               if (error) {
-                console.error('Error deleting finding:', error);
+                console.error('error bij verwijderen vondst:', error);
                 return;
               }
 
               // Navigate back or show a success message
-              console.log('Finding deleted successfully | ' + id);
+              console.log('vondst verwijderd | ' + id);
               navigation.goBack(); // Navigate back
+              navigation.dispatch({
+                type: 'NAVIGATE',
+                payload: {
+                  name: 'HomeScreen',
+                  params: { refresh: true },
+                },
+              });
             } catch (error) {
-              console.error('Unexpected error deleting finding:', error);
+              console.error('Unexpected error verwijderen vondst:', error);
             }
           },
           style: "destructive"
         }
       ]
     );
+  };
+
+  const handleSave = async () => {
+    setIsSaved(!isSaved);
+    if (!isSaved) {
+      try {
+        const { error } = await supabase
+          .from('savedFindings')
+          .insert([{ uid: session?.user?.id, finding_id: id }]);
+
+        if (error) {
+          console.error('Error opslaan vondst:', error);
+        } else {
+          console.log('vondst opgeslagen');
+        }
+      } catch (error) {
+        console.error('Unexpected error opslaan vondst:', error);
+      }
+    } else {
+      try {
+        const { error } = await supabase
+          .from('savedFindings')
+          .delete()
+          .eq('uid', session?.user?.id)
+          .eq('finding_id', id);
+
+        if (error) {
+          console.error('Error verwijderen opgeslagen vondst:', error);
+        } else {
+          console.log('vondst van opgeslagen verwijderd');
+        }
+      } catch (error) {
+        console.error('Unexpected error verwijderen opgeslagen vondst:', error);
+      }
+    }
   };
 
   const handleImagePress = (url: string) => {
@@ -196,7 +256,7 @@ export default function WeergaveVondst() {
         <ScrollView>
       <Text style={styles.title}>{finding.title}</Text>
       <View style={styles.divider}/>
-      {/* Swipeable Images Carousel */}
+      {/* SWIPEABLE IMAGES */}
       {finding.image_urls.length > 0 ? (
         <FlatList
           data={finding.image_urls}
@@ -210,7 +270,7 @@ export default function WeergaveVondst() {
         <Text style={styles.noImage}>No images available</Text>
       )}
     <View style={styles.divider}/>
-      {/* Display Details */}
+      {/* DISPLAY DETAILS */}
       <Text style={styles.descriptionTitle}>Productbeschrijving</Text>
       <Text style={styles.description}>{finding.description}</Text>
       <View style={styles.divider}/>
@@ -219,21 +279,30 @@ export default function WeergaveVondst() {
         <Text style={styles.stad}>{finding.stad}</Text>
       </View>
       <View style={styles.divider}/>
-      <Text style={styles.descriptionTitle}>Kenmerken</Text>
-      <Text style={styles.detail}>Categorie: {finding.categoryDescription}</Text>
-      <Text style={styles.detail}>Materiaal: {finding.materialTypeDescription}</Text>
-      <Text style={styles.detail}>Vondst: {finding.findingTypeId}</Text>
-
-      {/*DELETE*/}
-      {finding.uid === session?.user?.id && (
-        <View>
-          <TouchableOpacity style={styles.customButtonVerwijderen} onPress={handleDelete}>
-            <Text style={styles.deleteButtonText}>Verwijderen</Text>
-          </TouchableOpacity>
+      <View style={styles.kenmerkenContainer}>
+        <View style={styles.kenmerkenDetails}>
+          <Text style={styles.descriptionTitle}>Kenmerken</Text>
+          <Text style={styles.detail}>Categorie: {finding.categoryDescription}</Text>
+          <Text style={styles.detail}>Materiaal: {finding.materialTypeDescription}</Text>
+          <Text style={styles.detail}>Vondst: {finding.findingTypeId}</Text>
         </View>
-      )}
+        {/*DELETE*/}
+        {finding.uid === session?.user?.id ? (
+          <View style={styles.deleteButtonContainer}>
+            <TouchableOpacity style={styles.customButtonVerwijderen} onPress={handleDelete}>
+              <Icon name="delete" size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={styles.saveButtonContainer}>
+            <TouchableOpacity style={styles.customButtonSave} onPress={handleSave}>
+              <Icon name={isSaved ? "bookmark" : "bookmark-outline"} size={20} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
 
-      {/* Modal for Full-Size Image */}
+      {/* FULLSIZE IMAGE MODAL */}
       <Modal visible={isModalVisible} transparent={true} animationType="fade">
         <View style={styles.modalContainer}>
           <Image source={{ uri: selectedImageUrl || '' }} style={styles.fullSizeImage} />
@@ -260,13 +329,13 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   carousel: {
-    maxHeight: 250, // Set the height to match the image
+    maxHeight: 250, 
     marginBottom: 10,
     marginTop: 10,
   },
   image: {
     width: Dimensions.get('window').width * 0.6,
-    height: 250, // Keep consistent with carousel height
+    height: 250, 
     borderRadius: 8,
     marginHorizontal: 10,
     resizeMode: 'cover',
@@ -334,13 +403,34 @@ const styles = StyleSheet.create({
   },
   customButtonVerwijderen: {
     backgroundColor: '#ff4444',
-    paddingVertical: 12,
-    paddingHorizontal: 20, 
-    borderRadius: 5, 
-    marginBottom: 10,
+    padding: 10,
+    borderRadius: 50,
     alignItems: 'center',
-    justifyContent: 'center', 
-    width: '100%',
+    justifyContent: 'center',
+  },
+  customButtonSave: {
+    backgroundColor: '#007bff',
+    padding: 10,
+    borderRadius: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  deleteButtonContainer: {
+    marginLeft: 10,
+  },
+  saveButtonContainer: {
+    marginLeft: 10,
+  },
+  kenmerkenContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  kenmerkenDetails: {
+    flex: 1,
+  },
+  deleteIcon: {
+    marginRight: 8,
   },
   deleteButtonText: {
     color: '#fff',
