@@ -154,6 +154,12 @@ export default function BeoordelingPlaatsen() {
           starSize={30}
           color="#FFD700"
         />
+        {/* Indienen */}
+      <Button
+        title={loading ? 'Indienen...' : 'Beoordeling Indienen'}
+        onPress={handleSubmit}
+        disabled={loading || rating === 0 || !description.trim() || !recipient}
+      />
       </View>
 
       {/* Indienen */}
