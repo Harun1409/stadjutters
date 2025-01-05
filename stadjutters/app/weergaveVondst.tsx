@@ -142,21 +142,18 @@ export default function WeergaveVondst() {
           text: "Verwijderen",
           onPress: async () => {
             try {
-              // IMAGES VERWIJDEREN VAN STORAGE
+              // Delete images from storage
               if (finding?.image_urls) {
                 const deletePromises = finding.image_urls.map(async (url) => {
-                  const path = url.split('?')[0].split('/').slice(-2).join('/'); // CORRECTE URL VERKRIJGEN 
-                  const cleanPath = path.replace('public/', ''); 
-                  console.log('verwijderen image van storage:', cleanPath);
+                  const path = url.split('?')[0].split('/').slice(-2).join('/'); // Extract the correct path from the URL and remove query parameters
+                  console.log('Deleting image from storage:', path);
                   const { error } = await supabase
                     .storage
                     .from('UserUploadedImages')
-                    .remove([cleanPath]);
-
+                    .remove([path]);
+                    console.log('HK: deleted from storage: ', [path]);
                   if (error) {
-                    console.error('verwijderen image van storage error:', error);
-                  } else {
-                    console.log('image verwijderd van storage:', cleanPath);
+                    console.error('Error deleting image from storage:', error);
                   }
                 });
                 await Promise.all(deletePromises);
@@ -174,17 +171,10 @@ export default function WeergaveVondst() {
               }
 
               // Navigate back or show a success message
-              console.log('vondst verwijderd | ' + id);
+              console.log('Finding deleted successfully | ' + id);
               navigation.goBack(); // Navigate back
-              navigation.dispatch({
-                type: 'NAVIGATE',
-                payload: {
-                  name: 'HomeScreen',
-                  params: { refresh: true },
-                },
-              });
             } catch (error) {
-              console.error('Unexpected error verwijderen vondst:', error);
+              console.error('Unexpected error deleting finding:', error);
             }
           },
           style: "destructive"
