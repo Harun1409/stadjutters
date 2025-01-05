@@ -82,7 +82,7 @@ export default function WeergaveVondst() {
         // OPGEHAALDE DATA GEBRUIKEN
         setFinding({
           ...data,
-          image_urls: signedUrls.filter(Boolean), // Filter out any null signed URLs
+          image_urls: signedUrls.filter(Boolean), 
           categoryDescription: categoryData?.description || 'geen categorie description beschikbaar',
           materialTypeDescription: materialTypeData?.description || 'geen materiaal description beschikbaar',
         });
@@ -142,10 +142,9 @@ export default function WeergaveVondst() {
           text: "Verwijderen",
           onPress: async () => {
             try {
-              // Delete images from storage
               if (finding?.image_urls) {
                 const deletePromises = finding.image_urls.map(async (url) => {
-                  const path = url.split('?')[0].split('/').slice(-2).join('/'); // Extract the correct path from the URL and remove query parameters
+                  const path = url.split('?')[0].split('/').slice(-2).join('/'); 
                   console.log('Deleting image from storage:', path);
                   const { error } = await supabase
                     .storage
@@ -170,9 +169,8 @@ export default function WeergaveVondst() {
                 return;
               }
 
-              // Navigate back or show a success message
               console.log('Finding deleted successfully | ' + id);
-              navigation.goBack(); // Navigate back
+              navigation.goBack(); 
             } catch (error) {
               console.error('Unexpected error deleting finding:', error);
             }

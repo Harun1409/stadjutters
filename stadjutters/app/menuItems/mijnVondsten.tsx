@@ -42,13 +42,13 @@ export default function HomeScreen() {
       const { data, error } = await query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
       if (error) {
-        console.error('Error fetching data:', error);
+        console.error('Error verkrijgen data:', error);
         return [];
       }
 
       return data as Finding[];
     } catch (error) {
-      console.error('Unexpected error fetching data:', error);
+      console.error('Unexpected error verkrijgen data:', error);
       return [];
     }
   };
@@ -61,13 +61,13 @@ export default function HomeScreen() {
         .createSignedUrl(path, 60);
 
       if (error) {
-        console.error('Error creating signed URL:', error);
+        console.error('Error maken custom url:', error);
         return null;
       }
 
       return data.signedUrl;
     } catch (error) {
-      console.error('Unexpected error creating signed URL:', error);
+      console.error('Unexpected error maken custom url:', error);
       return null;
     }
   };
