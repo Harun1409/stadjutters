@@ -186,7 +186,7 @@ const styles = StyleSheet.create({
         color: 'white',
     },
     menuUserEmail: {
-        fontSize: 13,
+        fontSize: 14,
         textAlign: 'right',
         marginBottom: 30,
         marginRight: 20,
