@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Dimensions, Modal, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Dimensions, Modal, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; //https://static.enapter.com/rn/icons/material-community.html
-
+import { useSession } from './SessionContext'; // Ensure this is the correct path and provides session info
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation
 
 interface FindingDetails {
   title: string;
@@ -15,6 +16,7 @@ interface FindingDetails {
   materialTypeId: string;
   materialTypeDescription: string; // Material type description
   findingTypeId: string;
+  uid: string;
 }
 
 export default function WeergaveVondst() {
@@ -23,14 +25,17 @@ export default function WeergaveVondst() {
   const [loading, setLoading] = useState(true);
   const [isModalVisible, setModalVisible] = useState(false);
   const [selectedImageUrl, setSelectedImageUrl] = useState<string | null>(null);
+  const { session } = useSession(); // Ensure this hook provides session info
+  const navigation = useNavigation(); // Initialize navigation
 
   useEffect(() => {
+    console.log('uid:', session?.user?.id); // Log the user ID to verify
     const fetchFindingDetails = async () => {
       try {
         // Fetch finding details
         const { data, error } = await supabase
           .from('findings')
-          .select('title, stad, description, image_url, categoryId, materialTypeId, findingTypeId') // Include all fields
+          .select('title, stad, description, image_url, categoryId, materialTypeId, findingTypeId, uid') // Include all fields
           .eq('id', id)
           .single();
 
@@ -88,7 +93,7 @@ export default function WeergaveVondst() {
     };
 
     fetchFindingDetails();
-  }, [id]);
+  }, [id, session?.user?.id]); // Add session user ID as a dependency
 
   const fetchSignedUrl = async (path: string) => {
     try {
@@ -107,6 +112,60 @@ export default function WeergaveVondst() {
       console.error('Unexpected error creating signed URL:', error);
       return null;
     }
+  };
+
+  const handleDelete = async () => {
+    Alert.alert(
+      "Bevestiging",
+      "Weet je zeker dat je dit item wilt verwijderen?",
+      [
+        {
+          text: "Annuleren",
+          style: "cancel"
+        },
+        {
+          text: "Verwijderen",
+          onPress: async () => {
+            try {
+              // Delete images from storage
+              if (finding?.image_urls) {
+                const deletePromises = finding.image_urls.map(async (url) => {
+                  const path = url.split('?')[0].split('/').slice(-2).join('/'); // Extract the correct path from the URL and remove query parameters
+                  console.log('Deleting image from storage:', path);
+                  const { error } = await supabase
+                    .storage
+                    .from('UserUploadedImages')
+                    .remove([path]);
+                    console.log('HK: deleted from storage: ', [path]);
+                  if (error) {
+                    console.error('Error deleting image from storage:', error);
+                  }
+                });
+                await Promise.all(deletePromises);
+              }
+
+              // Delete finding from database
+              const { error } = await supabase
+                .from('findings')
+                .delete()
+                .eq('id', id);
+
+              if (error) {
+                console.error('Error deleting finding:', error);
+                return;
+              }
+
+              // Navigate back or show a success message
+              console.log('Finding deleted successfully | ' + id);
+              navigation.goBack(); // Navigate back
+            } catch (error) {
+              console.error('Unexpected error deleting finding:', error);
+            }
+          },
+          style: "destructive"
+        }
+      ]
+    );
   };
 
   const handleImagePress = (url: string) => {
@@ -164,6 +223,15 @@ export default function WeergaveVondst() {
       <Text style={styles.detail}>Categorie: {finding.categoryDescription}</Text>
       <Text style={styles.detail}>Materiaal: {finding.materialTypeDescription}</Text>
       <Text style={styles.detail}>Vondst: {finding.findingTypeId}</Text>
+
+      {/*DELETE*/}
+      {finding.uid === session?.user?.id && (
+        <View>
+          <TouchableOpacity style={styles.customButtonVerwijderen} onPress={handleDelete}>
+            <Text style={styles.deleteButtonText}>Verwijderen</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Modal for Full-Size Image */}
       <Modal visible={isModalVisible} transparent={true} animationType="fade">
@@ -263,5 +331,20 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 16,
     color: '#333',
+  },
+  customButtonVerwijderen: {
+    backgroundColor: '#ff4444',
+    paddingVertical: 12,
+    paddingHorizontal: 20, 
+    borderRadius: 5, 
+    marginBottom: 10,
+    alignItems: 'center',
+    justifyContent: 'center', 
+    width: '100%',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

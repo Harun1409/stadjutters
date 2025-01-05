@@ -11,7 +11,8 @@ import {
   Modal, 
   ScrollView,
   Switch,
-  TouchableWithoutFeedback 
+  TouchableWithoutFeedback,
+  RefreshControl // Import RefreshControl
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { Link } from 'expo-router';  
@@ -107,6 +108,7 @@ export default function HomeScreen() {
   const [isMaterialModalVisible, setMaterialModalVisible] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
+  const [refreshing, setRefreshing] = useState(false); // Add refreshing state
 
   const loadFindings = async (nextPage: number, clearFindings: boolean = false) => {
     if (!hasMore && !clearFindings) return;
@@ -207,6 +209,12 @@ export default function HomeScreen() {
 
   const clearMaterialFilter = () => {
     setSelectedMaterial('');
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadFindings(0, true); // Clear findings and load initial data
+    setRefreshing(false);
   };
 
   if (loading) {
@@ -330,6 +338,9 @@ export default function HomeScreen() {
         onEndReachedThreshold={0.5}
         ListFooterComponent={loadingMore ? <ActivityIndicator size="small" /> : null}
         numColumns={2}  // AANTAL KOLOMMEN OP 2 INSTELLEN EN CONSTANT HOUDEN
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       />
     </View>
   );

@@ -6,7 +6,8 @@ import {
   View, 
   Image, 
   ActivityIndicator, 
-  TouchableOpacity 
+  TouchableOpacity, 
+  RefreshControl 
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { Link } from 'expo-router'; 
@@ -27,6 +28,7 @@ export default function HomeScreen() {
   const [findings, setFindings] = useState<Finding[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
 
@@ -118,6 +120,12 @@ export default function HomeScreen() {
       });
     }
   };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadFindings(0, true);
+    setRefreshing(false);
+  };
   
   if (loading) {
     return <ActivityIndicator size="large" style={styles.loadingIndicator} />;
@@ -149,6 +157,9 @@ export default function HomeScreen() {
         onEndReachedThreshold={0.5}
         ListFooterComponent={loadingMore ? <ActivityIndicator size="small" /> : null}
         numColumns={2}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       />
     </View>
   );
