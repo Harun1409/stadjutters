@@ -183,11 +183,13 @@ export default function HomeScreen() {
     applyFilters();
   }, [selectedCategory, selectedMaterial]);
 
-  const handleSearch = async () => {
-    setLoading(true);
-    await loadFindings(0, true); // BESTAANDE VONDSTEN WISSEN VOORDAT ZOEKOPDRACHT WORDT TOEGEPAST
-    setLoading(false);
-  };
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      loadFindings(0, true); // BESTAANDE VONDSTEN WISSEN VOORDAT ZOEKOPDRACHT WORDT TOEGEPAST
+    }, 300); // WACHT 300MS NA HET TYPEN
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
@@ -198,7 +200,6 @@ export default function HomeScreen() {
       });
     }
   };
-
 
   const clearCategoryFilter = () => {
     setSelectedCategory('');
@@ -221,9 +222,8 @@ export default function HomeScreen() {
           placeholder="Zoek op titel..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch} // ZOEKOPDRACHT UITVOEREN BIJ ENTER
         />
-        <TouchableOpacity onPress={handleSearch} style={styles.searchIcon}>
+        <TouchableOpacity style={styles.searchIcon}>
           <Ionicons name="search" size={24} color="gray" />
         </TouchableOpacity>
       </View>
