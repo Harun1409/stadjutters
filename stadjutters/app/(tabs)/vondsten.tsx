@@ -4,6 +4,7 @@ import { StyleSheet, View, Alert, ActivityIndicator, Text, Image, ScrollView, Mo
 import * as Location from 'expo-location';
 import { supabase } from '../../lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Finding {
   id: string;
@@ -42,6 +43,7 @@ export default function App() {
   const [isMaterialModalVisible, setMaterialModalVisible] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
+
 
   useEffect(() => {
     (async () => {
@@ -124,6 +126,18 @@ export default function App() {
     retrieveCategories();
     retrieveMaterialTypes();
   }, []);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshDataOnFocus = async () => {
+        setLoading(true);
+        await refreshMarkers();
+        setLoading(false);
+      };
+
+      refreshDataOnFocus();
+    }, [])
+  );
 
   const fetchSignedUrl = async (path: string) => {
     try {
@@ -327,9 +341,9 @@ export default function App() {
       {/* Category Modal */}
       <Modal visible={isCategoryModalVisible} transparent={true}>
         <TouchableWithoutFeedback onPress={() => setCategoryModalVisible(false)}>
-          <View style={styles.modalContainer}>
+          <View style={styles.modalContainerDropdown}>
             <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
+              <View style={styles.modalContentDropdown}>
                 <Text style={styles.modalTitle}>Selecteer categorie</Text>
                 <FlatList
                   data={categories}
@@ -355,9 +369,9 @@ export default function App() {
       {/* Material Modal */}
       <Modal visible={isMaterialModalVisible} transparent={true}>
         <TouchableWithoutFeedback onPress={() => setMaterialModalVisible(false)}>
-          <View style={styles.modalContainer}>
+          <View style={styles.modalContainerDropdown}>
             <TouchableWithoutFeedback>
-              <View style={styles.modalContent}>
+              <View style={styles.modalContentDropdown}>
                 <Text style={styles.modalTitle}>Selecteer materiaal</Text>
                 <FlatList
                   data={materialTypes}
@@ -493,6 +507,24 @@ const styles = StyleSheet.create({
   },
   map: {
     ...StyleSheet.absoluteFillObject,
+  },
+  modalContainerDropdown: {
+    flex: 1,
+    justifyContent: 'flex-end', 
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  modalContentDropdown: {
+    width: '100%',
+    height: '34%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
   },
   modalContainer: {
     flex: 1,
