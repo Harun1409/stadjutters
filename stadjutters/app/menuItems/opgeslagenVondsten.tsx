@@ -40,7 +40,7 @@ export default function HomeScreen() {
         .eq('uid', userId); 
   
       if (savedFindingsError) {
-        console.error('Error fetching saved findings:', savedFindingsError);
+        console.error('Error verkrijgen opgeslagen vondsten:', savedFindingsError);
         return [];
       }
   

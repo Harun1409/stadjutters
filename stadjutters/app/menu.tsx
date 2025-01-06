@@ -150,9 +150,11 @@ const styles = StyleSheet.create({
         minHeight: '100%',
         borderLeftWidth: 1,
         borderTopWidth: 1,
-        borderTopLeftRadius: 20,
-        borderEndStartRadius: 20,
         paddingTop: 50,
+        borderStartStartRadius: 20, 
+        borderStartEndRadius: Platform.OS === 'ios' ? 0 : 20, 
+        borderEndStartRadius: Platform.OS === 'ios' ? 20 : 0, //SPECIFIEK VOOR IOS
+
     },
     menuUser: {
         marginTop: 60,

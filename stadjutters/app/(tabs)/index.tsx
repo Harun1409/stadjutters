@@ -108,7 +108,7 @@ export default function HomeScreen() {
   const [isMaterialModalVisible, setMaterialModalVisible] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
-  const [refreshing, setRefreshing] = useState(false); // Add refreshing state
+  const [refreshing, setRefreshing] = useState(false); 
 
   const loadFindings = async (nextPage: number, clearFindings: boolean = false) => {
     if (!hasMore && !clearFindings) return;
