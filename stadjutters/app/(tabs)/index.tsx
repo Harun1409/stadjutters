@@ -17,6 +17,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { Link } from 'expo-router';  
 import { Ionicons } from '@expo/vector-icons'; 
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Finding {
   id: string;
@@ -108,7 +109,7 @@ export default function HomeScreen() {
   const [isMaterialModalVisible, setMaterialModalVisible] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
-  const [refreshing, setRefreshing] = useState(false); // Add refreshing state
+  const [refreshing, setRefreshing] = useState(false); 
 
   const loadFindings = async (nextPage: number, clearFindings: boolean = false) => {
     if (!hasMore && !clearFindings) return;
@@ -174,6 +175,19 @@ export default function HomeScreen() {
 
     fetchInitialData();
   }, []);
+
+  // 
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshDataOnFocus = async () => {
+        setLoading(true);
+        await loadFindings(0, true);
+        setLoading(false);
+      };
+
+      refreshDataOnFocus();
+    }, [])
+  );
 
   useEffect(() => {
     const applyFilters = async () => {

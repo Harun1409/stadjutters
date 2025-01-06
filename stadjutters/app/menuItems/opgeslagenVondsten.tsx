@@ -12,6 +12,7 @@ import {
 import { supabase } from '../../lib/supabase';
 import { Link } from 'expo-router'; 
 import {useSession} from "@/app/SessionContext";
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Finding {
   id: string;
@@ -40,7 +41,7 @@ export default function HomeScreen() {
         .eq('uid', userId); 
   
       if (savedFindingsError) {
-        console.error('Error fetching saved findings:', savedFindingsError);
+        console.error('Error verkrijgen opgeslagen vondsten:', savedFindingsError);
         return [];
       }
   
@@ -126,6 +127,19 @@ export default function HomeScreen() {
 
     fetchInitialData();
   }, []);
+
+  // REFRESHED DE PAGINA WANNEER DEZE DE FOCUS KRIJGT
+    useFocusEffect(
+      React.useCallback(() => {
+        const refreshDataOnFocus = async () => {
+          setLoading(true);
+          await loadFindings(0, true);
+          setLoading(false);
+        };
+  
+        refreshDataOnFocus();
+      }, [])
+    );
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
