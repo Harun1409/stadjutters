@@ -219,6 +219,41 @@ export default function App() {
       .catch((err) => console.error('Fout bij het openen van de routebeschrijving:', err));
   };
 
+  const refreshMarkers = async () => {
+    setLoading(true);
+    const fetchMarkers = async () => {
+      let query = supabase
+        .from('findings')
+        .select('id, title, description, location, image_url, categoryId, materialTypeId')
+        .eq('findingTypeId', 'Straatvondst');
+
+      if (searchQuery) {
+        query = query.ilike('title', `%${searchQuery}%`);
+      }
+
+      if (selectedCategory) {
+        query = query.eq('categoryId', selectedCategory);
+      }
+
+      if (selectedMaterial) {
+        query = query.eq('materialTypeId', selectedMaterial);
+      }
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('FOUT BIJ HET OPHALEN VAN MARKERS:', error);
+        return;
+      }
+
+      const validMarkers = data.filter((finding: Finding) => finding.location);
+      setMarkers(validMarkers);
+    };
+
+    await fetchMarkers();
+    setLoading(false);
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -250,6 +285,10 @@ export default function App() {
           })}
         </MapView>
       )}
+      {/* Refresh Button */}
+      <TouchableOpacity style={styles.refreshButton} onPress={refreshMarkers}>
+        <Ionicons name="refresh" size={24} color="white" />
+      </TouchableOpacity>
       {/* Search Bar */}
       <View style={styles.searchContainer}>
         <TextInput
@@ -527,5 +566,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'gray',
     width: '100%',
     marginVertical: 10,
+  },
+  refreshButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    backgroundColor: '#7A3038',
+    padding: 10,
+    borderRadius: 50,
+    zIndex: 1,
   },
 });
