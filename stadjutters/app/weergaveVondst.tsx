@@ -4,7 +4,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; //https://static.enapter.com/rn/icons/material-community.html
 import { useSession } from './SessionContext';
-import { useNavigation } from '@react-navigation/native'; 
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
 
 interface FindingDetails {
   title: string;
@@ -29,6 +29,15 @@ export default function WeergaveVondst() {
   const { session } = useSession(); // SESSION INFO VERKRIJGEN
   const navigation = useNavigation(); // INITIALISATIE NAVIGATIE
 
+  // Titel is de titel van de vondst ipv 'weergaveVondst'
+  useFocusEffect(
+      React.useCallback(() => {
+        if (finding?.title) {
+          navigation.setOptions({ title: finding.title }); // Instellen van de paginatitel
+        }
+      }, [finding?.title])
+  );
+
   useEffect(() => {
     console.log('uid:', session?.user?.id); // USER ID IDENTIFICEREN
     const fetchFindingDetails = async () => {
@@ -36,7 +45,7 @@ export default function WeergaveVondst() {
         // FETCH VONDSTEN DETAILS
         const { data, error } = await supabase
           .from('findings')
-          .select('title, stad, description, image_url, categoryId, materialTypeId, findingTypeId, uid') 
+          .select('title, stad, description, image_url, categoryId, materialTypeId, findingTypeId, uid')
           .eq('id', id)
           .single();
 
@@ -82,7 +91,7 @@ export default function WeergaveVondst() {
         // OPGEHAALDE DATA GEBRUIKEN
         setFinding({
           ...data,
-          image_urls: signedUrls.filter(Boolean), 
+          image_urls: signedUrls.filter(Boolean),
           categoryDescription: categoryData?.description || 'geen categorie description beschikbaar',
           materialTypeDescription: materialTypeData?.description || 'geen materiaal description beschikbaar',
         });
@@ -144,7 +153,7 @@ export default function WeergaveVondst() {
             try {
               if (finding?.image_urls) {
                 const deletePromises = finding.image_urls.map(async (url) => {
-                  const path = url.split('?')[0].split('/').slice(-2).join('/'); 
+                  const path = url.split('?')[0].split('/').slice(-2).join('/');
                   console.log('Deleting image from storage:', path);
                   const { error } = await supabase
                     .storage
@@ -170,7 +179,7 @@ export default function WeergaveVondst() {
               }
 
               console.log('Finding deleted successfully | ' + id);
-              navigation.goBack(); 
+              navigation.goBack();
             } catch (error) {
               console.error('Unexpected error deleting finding:', error);
             }
@@ -311,19 +320,19 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     justifyContent: 'flex-start',
   },
-  divider: { 
-    height: 1, 
-    backgroundColor: 'gray', 
+  divider: {
+    height: 1,
+    backgroundColor: 'gray',
     marginVertical: 10,
   },
   carousel: {
-    maxHeight: 250, 
+    maxHeight: 250,
     marginBottom: 10,
     marginTop: 10,
   },
   image: {
     width: Dimensions.get('window').width * 0.6,
-    height: 250, 
+    height: 250,
     borderRadius: 8,
     marginHorizontal: 10,
     resizeMode: 'cover',
