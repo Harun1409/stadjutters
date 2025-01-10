@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Dimensions, Modal, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import {useLocalSearchParams, useRouter} from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; //https://static.enapter.com/rn/icons/material-community.html
 import { useSession } from './SessionContext';
@@ -20,6 +20,7 @@ interface FindingDetails {
 }
 
 export default function WeergaveVondst() {
+  const router = useRouter();
   const { id } = useLocalSearchParams();
   const [finding, setFinding] = useState<FindingDetails | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,6 +57,8 @@ export default function WeergaveVondst() {
 
         // IMAGE URL SPLITTEN IN MEERDERE
         const imageUrls = data?.image_url ? data.image_url.split(',').map((url: string) => url.trim()) : [];
+
+
 
         // CUSTOM URL GENEREREN
         const signedUrls = await Promise.all(
@@ -225,6 +228,11 @@ export default function WeergaveVondst() {
     }
   };
 
+  const handleChat = () => {
+    // @ts-ignore
+    router.push(`/chats/${finding.uid}`); // Navigeren naar de chatpagina
+  };
+
   const handleImagePress = (url: string) => {
     setSelectedImageUrl(url);
     setModalVisible(true);
@@ -283,6 +291,10 @@ export default function WeergaveVondst() {
           <Text style={styles.detail}>Materiaal: {finding.materialTypeDescription}</Text>
           <Text style={styles.detail}>Vondst: {finding.findingTypeId}</Text>
         </View>
+        <TouchableOpacity style={styles.chatButton} onPress={handleChat}>
+          <Icon name="chat" size={20} color="#fff" />
+          <Text style={styles.chatButtonText}>Chatten</Text>
+        </TouchableOpacity>
         {/*DELETE*/}
         {finding.uid === session?.user?.id ? (
           <View style={styles.deleteButtonContainer}>
@@ -433,5 +445,21 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  chatButton: {
+    backgroundColor: '#007bff', // Blauwe achtergrond
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 10,
+  },
+  chatButtonText: {
+    color: '#fff', // Witte tekst
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8, // Ruimte tussen icoon en tekst
   },
 });
