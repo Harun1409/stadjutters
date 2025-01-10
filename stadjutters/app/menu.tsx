@@ -16,7 +16,7 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
     const {session} = useSession();
     const [username, setUsername] = useState('');
     const translateX = useSharedValue(250);
-    const iconColor = '#7A3038';
+    const iconColor = 'white';
 
     // Animatie voor het menu
     const animatedStyle = useAnimatedStyle(() => ({
@@ -61,7 +61,7 @@ const Menu: React.FC<MenuProps> = ({visible, closeMenu}) => {
 
     if (!visible) return null;
 
-    const menuTopPosition = Platform.OS === 'ios' ? 90 : 92;
+    const menuTopPosition = Platform.OS === 'ios' ? 0 : 0;
 
     // Generieke component voor menu-items
     const MenuItem = ({ icon, label, route }: { icon: string; label: string; route: string }) => (
@@ -132,7 +132,7 @@ const styles = StyleSheet.create({
     },
     menuDivider: {
         height: 1,
-        backgroundColor: 'lightgray',
+        backgroundColor: 'white',
         width: '100%',
         marginVertical: 8,
     },
@@ -141,17 +141,20 @@ const styles = StyleSheet.create({
         right: 0,
         bottom: 0,
         width: 320,
-        zIndex: 2,
+        zIndex: 0, 
     },
     menu: {
-        backgroundColor: 'whitesmoke',
+        backgroundColor: '#7A3038',
         justifyContent: 'flex-start',
         alignItems: 'flex-end',
         minHeight: '100%',
-        borderLeftColor: 'lightgray',
-        borderTopColor: 'lightgray',
         borderLeftWidth: 1,
         borderTopWidth: 1,
+        paddingTop: 50,
+        borderStartStartRadius: 20, 
+        borderStartEndRadius: Platform.OS === 'ios' ? 0 : 20, 
+        borderEndStartRadius: Platform.OS === 'ios' ? 20 : 0, //SPECIFIEK VOOR IOS
+
     },
     menuUser: {
         marginTop: 60,
@@ -163,7 +166,7 @@ const styles = StyleSheet.create({
         width: '90%',
     },
     menuItem: {
-        color: 'black',
+        color: 'white',
         fontSize: 18,
         marginLeft: 10,
     },
@@ -175,18 +178,21 @@ const styles = StyleSheet.create({
         textAlign: 'right',
         // marginBottom: 5,
         marginRight: 20,
+        color: 'white',
     },
     menuNotLoggedInHeader: {
         fontSize: 18,
         textAlign: 'right',
         marginBottom: 5,
         marginRight: 20,
+        color: 'white',
     },
     menuUserEmail: {
-        fontSize: 12,
+        fontSize: 14,
         textAlign: 'right',
         marginBottom: 30,
         marginRight: 20,
+        color: 'white',
     },
 });
 

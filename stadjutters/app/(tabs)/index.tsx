@@ -11,11 +11,13 @@ import {
   Modal, 
   ScrollView,
   Switch,
-  TouchableWithoutFeedback 
+  TouchableWithoutFeedback,
+  RefreshControl // Import RefreshControl
 } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { Link } from 'expo-router';  
 import { Ionicons } from '@expo/vector-icons'; 
+import { useFocusEffect } from '@react-navigation/native';
 
 interface Finding {
   id: string;
@@ -107,6 +109,7 @@ export default function HomeScreen() {
   const [isMaterialModalVisible, setMaterialModalVisible] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [materialTypes, setMaterialTypes] = useState<MaterialType[]>([]);
+  const [refreshing, setRefreshing] = useState(false); 
 
   const loadFindings = async (nextPage: number, clearFindings: boolean = false) => {
     if (!hasMore && !clearFindings) return;
@@ -173,6 +176,19 @@ export default function HomeScreen() {
     fetchInitialData();
   }, []);
 
+  // 
+  useFocusEffect(
+    React.useCallback(() => {
+      const refreshDataOnFocus = async () => {
+        setLoading(true);
+        await loadFindings(0, true);
+        setLoading(false);
+      };
+
+      refreshDataOnFocus();
+    }, [])
+  );
+
   useEffect(() => {
     const applyFilters = async () => {
       setLoading(true);
@@ -183,11 +199,13 @@ export default function HomeScreen() {
     applyFilters();
   }, [selectedCategory, selectedMaterial]);
 
-  const handleSearch = async () => {
-    setLoading(true);
-    await loadFindings(0, true); // BESTAANDE VONDSTEN WISSEN VOORDAT ZOEKOPDRACHT WORDT TOEGEPAST
-    setLoading(false);
-  };
+  useEffect(() => {
+    const delayDebounceFn = setTimeout(() => {
+      loadFindings(0, true); // BESTAANDE VONDSTEN WISSEN VOORDAT ZOEKOPDRACHT WORDT TOEGEPAST
+    }, 300); // WACHT 300MS NA HET TYPEN
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchQuery]);
 
   const handleLoadMore = () => {
     if (!loadingMore && hasMore) {
@@ -199,13 +217,18 @@ export default function HomeScreen() {
     }
   };
 
-
   const clearCategoryFilter = () => {
     setSelectedCategory('');
   };
 
   const clearMaterialFilter = () => {
     setSelectedMaterial('');
+  };
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadFindings(0, true); // Clear findings and load initial data
+    setRefreshing(false);
   };
 
   if (loading) {
@@ -221,9 +244,8 @@ export default function HomeScreen() {
           placeholder="Zoek op titel..."
           value={searchQuery}
           onChangeText={setSearchQuery}
-          onSubmitEditing={handleSearch} // ZOEKOPDRACHT UITVOEREN BIJ ENTER
         />
-        <TouchableOpacity onPress={handleSearch} style={styles.searchIcon}>
+        <TouchableOpacity style={styles.searchIcon}>
           <Ionicons name="search" size={24} color="gray" />
         </TouchableOpacity>
       </View>
@@ -330,6 +352,9 @@ export default function HomeScreen() {
         onEndReachedThreshold={0.5}
         ListFooterComponent={loadingMore ? <ActivityIndicator size="small" /> : null}
         numColumns={2}  // AANTAL KOLOMMEN OP 2 INSTELLEN EN CONSTANT HOUDEN
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+        }
       />
     </View>
   );
