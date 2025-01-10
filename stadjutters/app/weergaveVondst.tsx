@@ -307,10 +307,12 @@ export default function WeergaveVondst() {
           <Text style={styles.detail}>Materiaal: {finding.materialTypeDescription}</Text>
           <Text style={styles.detail}>Vondst: {finding.findingTypeId}</Text>
         </View>
-        <TouchableOpacity style={styles.chatButton} onPress={handleChat}>
-          <Icon name="chat" size={20} color="#fff" />
-          <Text style={styles.chatButtonText}>Chatten</Text>
-        </TouchableOpacity>
+        {session?.user?.id && finding.uid !== session.user.id && (
+            <TouchableOpacity style={styles.chatButton} onPress={handleChat}>
+              <Icon name="chat" size={20} color="#fff" />
+              <Text style={styles.chatButtonText}>Chatten</Text>
+            </TouchableOpacity>
+        )}
         {/*DELETE*/}
         {finding.uid === session?.user?.id ? (
           <View style={styles.deleteButtonContainer}>
