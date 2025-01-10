@@ -17,6 +17,7 @@ interface FindingDetails {
   materialTypeDescription: string; // MATERIAAL TYPE BESCHRIJVING
   findingTypeId: string;
   uid: string;
+  ownerName: string;
 }
 
 export default function WeergaveVondst() {
@@ -58,6 +59,16 @@ export default function WeergaveVondst() {
         // IMAGE URL SPLITTEN IN MEERDERE
         const imageUrls = data?.image_url ? data.image_url.split(',').map((url: string) => url.trim()) : [];
 
+        // FETCH GEBRUIKERSNAAM VAN DE EIGENAAR
+        const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('username')
+            .eq('id', data?.uid)
+            .single();
+
+        if (profileError) {
+          console.error('Error bij verkrijgen gebruikersnaam:', profileError);
+        }
 
 
         // CUSTOM URL GENEREREN
@@ -94,6 +105,7 @@ export default function WeergaveVondst() {
         // OPGEHAALDE DATA GEBRUIKEN
         setFinding({
           ...data,
+          ownerName: profileData?.username || 'Onbekende gebruiker',
           image_urls: signedUrls.filter(Boolean),
           categoryDescription: categoryData?.description || 'geen categorie description beschikbaar',
           materialTypeDescription: materialTypeData?.description || 'geen materiaal description beschikbaar',
@@ -261,6 +273,10 @@ export default function WeergaveVondst() {
         <ScrollView>
       <Text style={styles.title}>{finding.title}</Text>
       <View style={styles.divider}/>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={styles.ownerText}>{finding.ownerName}</Text>
+          </View>
+          <View style={styles.divider} />
       {/* SWIPEABLE IMAGES */}
       {finding.image_urls.length > 0 ? (
         <FlatList
@@ -461,5 +477,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8, // Ruimte tussen icoon en tekst
+  },
+  ownerText: {
+    fontSize: 16,
+    color: '#444',
+    marginLeft: 8,
   },
 });
