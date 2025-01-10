@@ -34,33 +34,33 @@ export default function HomeScreen() {
           alert('Je moet ingelogd zijn om beoordelingen te bekijken.');
           return;
         }
-
+    
         const userId = session.user.id;
         console.log('Huidige gebruiker ID:', userId);
-
+    
         // Stel de query samen afhankelijk van het filtertype
         let query = supabase
           .from('UserReview')
           .select('*')
           .order('created_at', { ascending: false });
-
+    
         if (filterType === 'received') {
           query = query.eq('reviewed_user_id', userId);
         } else if (filterType === 'given') {
           query = query.eq('user_id', userId);
         }
-
+    
         const { data, error } = await query;
-
+    
         if (error) {
           console.error('Fout bij ophalen beoordelingen:', error.message);
           alert('Er ging iets mis bij het ophalen van de beoordelingen.');
           setReviews([]);
           return;
         }
-
+    
         console.log('Beoordelingen opgehaald:', data);
-
+    
         // Haal gebruikersnamen op voor de relevante user_id's
         const userIds = Array.from(
           new Set(
@@ -69,19 +69,23 @@ export default function HomeScreen() {
             )
           )
         );
-
+    
+        console.log('Gebruikers ID\'s voor ophalen:', userIds);
+    
         const { data: usersData, error: usersError } = await supabase
           .from('profiles')
           .select('id, username')
           .in('id', userIds);
-
+    
         if (usersError) {
           console.error('Fout bij ophalen gebruikersnamen:', usersError.message);
           alert('Er ging iets mis bij het ophalen van gebruikersnamen.');
           setReviews([]);
           return;
         }
-
+    
+        console.log('Ophalen gebruikers:', usersData);
+    
         const userMap: Record<string, string> = usersData.reduce(
           (acc: Record<string, string>, user: User) => {
             acc[user.id] = user.username;
@@ -89,19 +93,20 @@ export default function HomeScreen() {
           },
           {}
         );
-
+    
+        console.log('Gebruikersnamen map:', userMap);
+    
         const mappedReviews = data.map((item) => ({
           id: item.id,
           rating: item.rating,
           description: item.description,
-          userId:
-            filterType === 'received' ? item.user_id : item.reviewed_user_id,
+          userId: filterType === 'received' ? item.user_id : item.user_id,
           username:
             userMap[
               filterType === 'received' ? item.user_id : item.reviewed_user_id
             ] || 'Onbekend',
         }));
-
+    
         setReviews(mappedReviews);
       } catch (err) {
         console.error('Onverwachte fout:', err);
@@ -111,6 +116,8 @@ export default function HomeScreen() {
         setLoading(false);
       }
     };
+    
+    
 
     fetchReviews();
   }, [filterType, session]);

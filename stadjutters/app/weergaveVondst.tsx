@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator, Image, FlatList, Dimensions, Modal, TouchableOpacity, ScrollView, Alert } from 'react-native';
-import { useLocalSearchParams } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons'; //https://static.enapter.com/rn/icons/material-community.html
 import { useSession } from './SessionContext';
@@ -28,6 +28,7 @@ export default function WeergaveVondst() {
   const [isSaved, setIsSaved] = useState(false); // OPSLAAN KNOP
   const { session } = useSession(); // SESSION INFO VERKRIJGEN
   const navigation = useNavigation(); // INITIALISATIE NAVIGATIE
+  const router = useRouter(); // INITIALISATIE ROUTER
 
   useEffect(() => {
     console.log('uid:', session?.user?.id); // USER ID IDENTIFICEREN
@@ -273,6 +274,16 @@ export default function WeergaveVondst() {
           <Text style={styles.detail}>Categorie: {finding.categoryDescription}</Text>
           <Text style={styles.detail}>Materiaal: {finding.materialTypeDescription}</Text>
           <Text style={styles.detail}>Vondst: {finding.findingTypeId}</Text>
+          {/* Navigeren naar de beoordelingspagina via router.push */}
+      <TouchableOpacity
+       onPress={() => {
+        // Combineer beide queryparameters in één enkele `router.push()`
+        router.push(`/beoordelingPlaatsen?user_id=${finding.uid}&title=${encodeURIComponent(finding.title)}`);
+      }}
+        style={styles.link}
+      >
+        <Text style={styles.linkText}>Beoordeling Plaatsen</Text>
+      </TouchableOpacity>
         </View>
         {/*DELETE*/}
         {finding.uid === session?.user?.id ? (
@@ -424,5 +435,14 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  link: {
+    borderRadius: 5,
+    marginTop: 5,
+  },
+  linkText: {
+    color: 'blue',
+    fontSize: 16,
+    marginTop: 5,
   },
 });
