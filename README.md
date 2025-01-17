@@ -27,9 +27,8 @@ Volg deze stappen om de Stadjutters-app lokaal te installeren en te gebruiken:
 - npx expo start
 
 4. Download de Expo Go app op je telefoon:
-
-Voor Android: via de Google Play Store.
-Voor iOS: via de Apple App Store.
+- Voor Android: via de Google Play Store.
+- Voor iOS: via de Apple App Store.
 
 5. Scan de QR-code in de Expo CLI: Open de Expo Go app en scan de QR-code die in de terminal verschijnt om de applicatie op je telefoon te bekijken.
 
