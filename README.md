@@ -15,7 +15,6 @@ De Stadjutters-app is ontworpen om gebruikers te helpen bijdragen aan een circul
 Volg deze stappen om de Stadjutters-app lokaal te installeren en te gebruiken:
 
 1. **Clone de repository:**
-   ```bash
 2. Open de juiste map in Visual Studio Code:
 - Open Visual Studio Code.
 - Klik op File > Open Folder.
